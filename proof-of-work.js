@@ -131,4 +131,4 @@ const pow = {
   },
 };
 
-module.exports = { pow }
+module.exports = { pow };
