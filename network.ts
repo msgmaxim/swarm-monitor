@@ -40,7 +40,7 @@ export class Network {
     return this;
   }
 
-  async updateAllNodes() {
+  private async _updateAllNodes() {
     try {
       const response = await fetch(SEED_NODE_URL, SWARM_STATE_OPTIONS);
       if (!response.ok) {
@@ -59,7 +59,6 @@ export class Network {
     }
   }
 
-  async getAccountSwarm(pubKey: string): Promise<Snode[]>;
   async getAccountSwarm(pubKey: string) {
     const body = {
       method: 'get_snodes_for_pubkey',
@@ -80,7 +79,7 @@ export class Network {
     let nodeIdx;
     try {
       if (this.allNodes.length === 0) {
-        await this.updateAllNodes();
+        await this._updateAllNodes();
       }
       nodeIdx = Math.floor(Math.random() * this.allNodes.length);
       const url = `https://${this.allNodes[nodeIdx].ip}:${this.allNodes[nodeIdx].port}/storage_rpc/v1`;

@@ -20,16 +20,16 @@ export class Message {
     this.network = new Network();
     this.pubKey = pubKey;
     this.data = Message._generateData();
-    this.timestamp = Message._getTimestamp();
+    this.timestamp = Message._generateTimestamp();
     this.ttl = 86400000; // 24 hours
     this.nonce = pow.calcPoW(this.timestamp, this.ttl, pubKey, this.data, DIFFICULTY);
   }
 
-  static _getTimestamp() {
+  private static _generateTimestamp() {
     return new Date().getTime();
   }
 
-  static _generateData() {
+  private static _generateData() {
     let data = '';
     for (let i = 0; i < DATA_LEN; i++) {
       data += DATA_CHARS.charAt(Math.floor(Math.random() * DATA_CHARS_LEN));

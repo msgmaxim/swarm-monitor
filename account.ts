@@ -20,7 +20,7 @@ export class Account {
     this.swarm = [];
   }
 
-  static _generatePubKey() {
+  private static _generatePubKey() {
     let pubKey = '05';
     for (let i = 0; i < PUB_KEY_LEN; i++) {
       pubKey += PUB_KEY_CHARS.charAt(Math.floor(Math.random() * PUB_KEY_CHARS_LEN));
@@ -28,20 +28,20 @@ export class Account {
     return pubKey;
   }
 
-  async updateSwarm(attempts: number = 0) {
+  private async _updateSwarm(attempts: number = 0) {
     if (attempts >= 10) {
       throw new Error(`Couldn't update swarm for ${this.pubKey}`);
     }
     this.swarm = await this.network.getAccountSwarm(this.pubKey);
     if (this.swarm.length === 0) {
-      await this.updateSwarm(attempts + 1);
+      await this._updateSwarm(attempts + 1);
     }
   }
 
   async sendMessage() {
     const message = new Message(this.pubKey);
     const ps: Promise<void>[] = [];
-    await this.updateSwarm();
+    await this._updateSwarm();
     this.swarm.forEach(snode => {
       ps.push(snode.sendMessage(message));
     });
