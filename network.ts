@@ -50,7 +50,7 @@ export class Network {
       const result = await response.json();
       this.allNodes = result.result.service_node_states
         .filter((snode: { public_ip: string; }) => snode.public_ip !== '0.0.0.0')
-        .map((snode: { public_ip: any; storage_port: any; }) => new Snode(network, snode.public_ip, snode.storage_port));
+        .map((snode: { public_ip: any; storage_port: any; }) => new Snode(snode.public_ip, snode.storage_port));
       if (this.allNodes.length === 0) {
         throw new Error(`Error updating all nodes, couldn't get any valid ips`);
       }
@@ -59,6 +59,7 @@ export class Network {
     }
   }
 
+  async getAccountSwarm(pubKey: string): Promise<Snode[]>;
   async getAccountSwarm(pubKey: string) {
     const body = {
       method: 'get_snodes_for_pubkey',
@@ -87,14 +88,16 @@ export class Network {
       if (!response.ok) {
         console.log(`${response.status} response retrieving account swarm`);
         this.allNodes.splice(nodeIdx, 1);
-        return null;
+        return [];
       }
       const { snodes } = await response.json();
-      return snodes;
+      return snodes
+        .filter((snode: { ip: string; }) => snode.ip !== '0.0.0.0')
+        .map((snode: { ip: any; port: any; }) => new Snode(snode.ip, snode.port));
     } catch (e) {
       console.log(`Error retrieving account swarm: ${e}`);
       this.allNodes.splice(nodeIdx, 1);
-      return null;
+      return [];
     }
   }
 }

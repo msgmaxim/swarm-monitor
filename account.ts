@@ -1,5 +1,6 @@
 import { Message } from './message';
 import { Network } from './network';
+import { Snode } from './snode';
 
 // Pubkey constants
 const PUB_KEY_CHARS = '0123456789abcdef';
@@ -10,7 +11,7 @@ export class Account {
   network: Network;
   pubKey: string;
   messages: {};
-  swarm: any[];
+  swarm: Snode[];
 
   constructor(network: Network) {
     this.network = network;
@@ -27,8 +28,23 @@ export class Account {
     return pubKey;
   }
 
-  async updateSwarm() {
-    this.swarm = await this.network.getAccountSwarm(this.pubKey)
-    console.log(this.swarm);
+  async updateSwarm(attempts: number = 0) {
+    if (attempts >= 10) {
+      throw new Error(`Couldn't update swarm for ${this.pubKey}`);
+    }
+    this.swarm = await this.network.getAccountSwarm(this.pubKey);
+    if (this.swarm.length === 0) {
+      await this.updateSwarm(attempts + 1);
+    }
+  }
+
+  async sendMessage() {
+    const message = new Message(this.network, this.pubKey);
+    const ps: Promise<void>[] = [];
+    await this.updateSwarm();
+    this.swarm.forEach(snode => {
+      ps.push(snode.sendMessage(message));
+    });
+    await Promise.all(ps);
   }
 }
