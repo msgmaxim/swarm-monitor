@@ -95,7 +95,7 @@ export class Network {
     }
   }
 
-  async sendToSnode(message: Message, snode: Snode) {
+  async sendToSnode(snodeUrl: string, message: Message) {
     const method = 'store';
     const params = {
       pubKey: message.pubKey,
@@ -106,16 +106,34 @@ export class Network {
     };
     const options = Network._getOptions(method, params);
     try {
-      const url = `https://${snode.ip}:${snode.port}/storage_rpc/v1`;
-      const response = await fetch(url, options);
+      const response = await fetch(snodeUrl, options);
       if (!response.ok) {
-        console.log(`${response.status} response sending message to ${snode.ip}:${snode.port}`);
+        console.log(`${response.status} response sending message to ${snodeUrl}`);
         return false;
       }
       return true;
     } catch (e) {
-      console.log(`Error sending message to ${snode.ip}:${snode.port}: ${e}`);
+      console.log(`Error sending message to ${snodeUrl}: ${e}`);
       return false;
+    }
+  }
+
+  async retrieveFromSnode(snodeUrl: string, pubKey: string) {
+    const method = 'retrieve';
+    const params = {
+      pubKey,
+      lastHash: '',
+    };
+    const options = Network._getOptions(method, params);
+    try {
+      const response = await fetch(snodeUrl, options);
+      if (!response.ok) {
+        throw new Error(`${response.status} response`);
+      }
+      const result = await response.json();
+      return result.messages;
+    } catch (e) {
+      throw new Error(`Error retrieving messages from ${snodeUrl}: ${e}`);
     }
   }
 }
