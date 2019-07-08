@@ -1,4 +1,5 @@
-const { pow } = require('./proof-of-work');
+import { pow } from './proof-of-work';
+import { Network } from './network';
 
 // Message data constants
 const DATA_CHARS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -7,14 +8,21 @@ const DATA_LEN = 20;
 // Current network difficulty
 const DIFFICULTY = 1;
 
-class Message {
-  constructor(network, pubKey) {
+export class Message {
+  network: Network;
+  pubKey: string;
+  data: string;
+  timestamp: number;
+  ttl: number;
+  nonce: string;
+
+  constructor(network: Network, pubKey: string) {
     this.network = network;
     this.pubKey = pubKey;
     this.data = Message._generateData();
     this.timestamp = Message._getTimestamp();
     this.ttl = 86400000; // 24 hours
-    this.nonce = pow.calcPoW(this.timestamp, this.ttl, this.pubKey, this.data, DIFFICULTY);
+    this.nonce = pow.calcPoW(this.timestamp, this.ttl, pubKey, this.data, DIFFICULTY);
   }
 
   static _getTimestamp() {
@@ -28,8 +36,4 @@ class Message {
     }
     return data;
   }
-}
-
-module.exports = {
-  Message,
 }

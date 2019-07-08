@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 // Seed node endpoint
 const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
@@ -24,12 +24,15 @@ const SWARM_STATE_OPTIONS = {
   },
 };
 
-class Network {
+export class Network {
+  static instance: Network;
+  allNodes: any[];
+
   constructor() {
     if (!!Network.instance) {
       return Network.instance;
     }
-    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = '0';
     this.allNodes = [];
     Network.instance = this;
     return this;
@@ -51,8 +54,8 @@ class Network {
       }
       const result = await response.json();
       const snodes = result.result.service_node_states
-      .filter(snode => snode.public_ip !== '0.0.0.0')
-      .map(snode => ({
+      .filter((snode: { public_ip: string; }) => snode.public_ip !== '0.0.0.0')
+      .map((snode: { public_ip: any; storage_port: any; }) => ({
         ip: snode.public_ip,
         port: snode.storage_port,
       }));
@@ -63,7 +66,7 @@ class Network {
     }
   }
 
-  async getAccountSwarm(pubKey) {
+  async getAccountSwarm(pubKey: string) {
     const body = {
       method: 'get_snodes_for_pubkey',
       params: {
@@ -98,7 +101,3 @@ class Network {
     }
   }
 }
-
-module.exports = {
-  Network
-};

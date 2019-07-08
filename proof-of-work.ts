@@ -1,14 +1,13 @@
-const crypto = require('crypto');
-const JSBI = require('jsbi');
-const ByteBuffer = require('bytebuffer');
+import crypto from 'crypto';
+import JSBI from 'jsbi';
+import ByteBuffer from 'bytebuffer';
 
 const NONCE_LEN = 8;
 // Modify this value for difficulty scaling
-const FALLBACK_DIFFICULTY = 10;
 
-const pow = {
+export const pow = {
   // Increment Uint8Array nonce by '_increment' with carrying
-  incrementNonce(nonce, _increment = 1) {
+  incrementNonce(nonce: Iterable<number> | Uint8Array, _increment = 1) {
     let idx = NONCE_LEN - 1;
     const newNonce = new Uint8Array(nonce);
     let increment = _increment;
@@ -22,8 +21,8 @@ const pow = {
   },
 
   // Convert a Uint8Array to a base64 string
-  bufferToBase64(buf) {
-    function mapFn(ch) {
+  bufferToBase64(buf: Uint8Array) {
+    function mapFn(ch: number) {
       return String.fromCharCode(ch);
     }
     const binaryString = Array.prototype.map.call(buf, mapFn).join('');
@@ -31,7 +30,7 @@ const pow = {
   },
 
   // Convert BigInteger to Uint8Array of length NONCE_LEN
-  bigIntToUint8Array(bigInt) {
+  bigIntToUint8Array(bigInt: JSBI) {
     const arr = new Uint8Array(NONCE_LEN);
     let n;
     for (let idx = NONCE_LEN - 1; idx >= 0; idx -= 1) {
@@ -47,7 +46,7 @@ const pow = {
   },
 
   // Compare two Uint8Arrays, return true if arr1 is > arr2
-  greaterThan(arr1, arr2) {
+  greaterThan(arr1: Uint8Array, arr2: Uint8Array) {
     // Early exit if lengths are not equal. Should never happen
     if (arr1.length !== arr2.length) return false;
 
@@ -60,11 +59,11 @@ const pow = {
 
   // Return nonce that hashes together with payload lower than the target
   calcPoW(
-    timestamp,
-    ttl,
-    pubKey,
-    data,
-    _difficulty = null,
+    timestamp: number,
+    ttl: number,
+    pubKey: string,
+    data: string,
+    difficulty: number,
     increment = 1,
     startNonce = 0
   ) {
@@ -75,7 +74,6 @@ const pow = {
       ).toArrayBuffer()
     );
 
-    const difficulty = _difficulty || FALLBACK_DIFFICULTY;
     const target = pow.calcTarget(ttl, payload.length, difficulty);
 
     let nonce = new Uint8Array(NONCE_LEN);
@@ -98,7 +96,7 @@ const pow = {
     return pow.bufferToBase64(nonce);
   },
 
-  calcTarget(ttl, payloadLen, difficulty = FALLBACK_DIFFICULTY) {
+  calcTarget(ttl: number, payloadLen: number, difficulty: number) {
     // payloadLength + NONCE_LEN
     const totalLen = JSBI.add(JSBI.BigInt(payloadLen), JSBI.BigInt(NONCE_LEN));
     // ttl converted to seconds
@@ -129,5 +127,3 @@ const pow = {
     return pow.bigIntToUint8Array(targetNum);
   },
 };
-
-module.exports = { pow };

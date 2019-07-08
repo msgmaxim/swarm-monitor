@@ -1,12 +1,18 @@
-const { Message } = require('./message');
+import { Message } from './message';
+import { Network } from './network';
 
 // Pubkey constants
 const PUB_KEY_CHARS = '0123456789abcdef';
 const PUB_KEY_CHARS_LEN = PUB_KEY_CHARS.length;
 const PUB_KEY_LEN = 64;
 
-class Account {
-  constructor(network) {
+export class Account {
+  network: Network;
+  pubKey: string;
+  messages: {};
+  swarm: any[];
+
+  constructor(network: Network) {
     this.network = network;
     this.pubKey = Account._generatePubKey();
     this.messages = {};
@@ -25,8 +31,4 @@ class Account {
     this.swarm = await this.network.getAccountSwarm(this.pubKey)
     console.log(this.swarm);
   }
-}
-
-module.exports = {
-  Account,
 }
