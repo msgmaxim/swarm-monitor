@@ -8,7 +8,8 @@ const DATA_LEN = 20;
 const DIFFICULTY = 1;
 
 class Message {
-  constructor(pubKey) {
+  constructor(network, pubKey) {
+    this.network = network;
     this.pubKey = pubKey;
     this.data = Message._generateData();
     this.timestamp = Message._getTimestamp();

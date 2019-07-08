@@ -1,9 +1,11 @@
 const { Account } = require('./account');
 const { Message } = require('./message');
+const { Network } = require('./network');
 
 const start = async () => {
-  const a = new Account();
-  console.log(a.pubKey)
+  const network = await Network.getInstance();
+  const a = new Account(network);
+  await a.updateSwarm();
   const m = new Message();
   console.log(m.nonce)
 }
