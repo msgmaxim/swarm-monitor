@@ -1,5 +1,7 @@
 import fetch from 'node-fetch';
 
+import { Snode } from './snode';
+
 // Seed node endpoint
 const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
 const SWARM_STATE_RPC = {
@@ -26,7 +28,7 @@ const SWARM_STATE_OPTIONS = {
 
 export class Network {
   static instance: Network;
-  allNodes: any[];
+  allNodes: Snode[];
 
   constructor() {
     if (!!Network.instance) {
@@ -38,31 +40,22 @@ export class Network {
     return this;
   }
 
-  static async getInstance() {
-    const instance = new Network();
-    if (instance.allNodes.length === 0) {
-      instance.allNodes = await Network.getAllNodes();
-    }
-    return instance;
-  }
-
-  static async getAllNodes() {
+  async updateAllNodes() {
     try {
       const response = await fetch(SEED_NODE_URL, SWARM_STATE_OPTIONS);
       if (!response.ok) {
-        return [];
+        throw new Error(`${response.status} response updating all nodes`);
       }
+      const network = new Network();
       const result = await response.json();
-      const snodes = result.result.service_node_states
-      .filter((snode: { public_ip: string; }) => snode.public_ip !== '0.0.0.0')
-      .map((snode: { public_ip: any; storage_port: any; }) => ({
-        ip: snode.public_ip,
-        port: snode.storage_port,
-      }));
-      return snodes;
+      this.allNodes = result.result.service_node_states
+        .filter((snode: { public_ip: string; }) => snode.public_ip !== '0.0.0.0')
+        .map((snode: { public_ip: any; storage_port: any; }) => new Snode(network, snode.public_ip, snode.storage_port));
+      if (this.allNodes.length === 0) {
+        throw new Error(`Error updating all nodes, couldn't get any valid ips`);
+      }
     } catch (e) {
-      console.log(`Error updating all nodes: ${e}`);
-      return [];
+      throw new Error(`Error updating all nodes: ${e}`);
     }
   }
 
@@ -83,8 +76,12 @@ export class Network {
         'Content-Type': 'application/json',
       },
     };
-    const nodeIdx = Math.floor(Math.random() * this.allNodes.length);
+    let nodeIdx;
     try {
+      if (this.allNodes.length === 0) {
+        await this.updateAllNodes();
+      }
+      nodeIdx = Math.floor(Math.random() * this.allNodes.length);
       const url = `https://${this.allNodes[nodeIdx].ip}:${this.allNodes[nodeIdx].port}/storage_rpc/v1`;
       const response = await fetch(url, options);
       if (!response.ok) {
