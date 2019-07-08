@@ -59,7 +59,7 @@ const pow = {
   },
 
   // Return nonce that hashes together with payload lower than the target
-  async calcPoW(
+  calcPoW(
     timestamp,
     ttl,
     pubKey,
@@ -91,7 +91,6 @@ const pow = {
       nonce = nextNonce;
       nextNonce = pow.incrementNonce(nonce, increment);
       innerPayload.set(nonce);
-      // eslint-disable-next-line no-await-in-loop
       hash = crypto.createHash('sha512');
       hash.update(innerPayload);
       trialValue = hash.digest().slice(0, NONCE_LEN);
