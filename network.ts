@@ -1,30 +1,10 @@
 import fetch from 'node-fetch';
 
 import { Snode } from './snode';
+import { Message } from './message';
 
 // Seed node endpoint
 const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
-const SWARM_STATE_RPC = {
-  jsonrpc: '2.0',
-  id: '0',
-  method: 'get_n_service_nodes',
-  params: {
-    fields: {
-      public_ip: true,
-      storage_port: true,
-    },
-  },
-};
-const SWARM_STATE_OPTIONS = {
-  method: 'POST',
-  options: {
-    timeout: 5000,
-  },
-  body: JSON.stringify(SWARM_STATE_RPC),
-  headers: {
-    'Content-Type': 'application/json',
-  },
-};
 
 export class Network {
   static instance: Network;
@@ -40,9 +20,35 @@ export class Network {
     return this;
   }
 
+  private static _getOptions(method: string, params: Object) {
+    const body = {
+      jsonrpc: '2.0',
+      id: '0',
+      method,
+      params,
+    };
+    return {
+      jsonrpc: '2.0',
+      id: '0',
+      method: 'POST',
+      timeout: 5000,
+      body: JSON.stringify(body),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+  }
+
   private async _updateAllNodes() {
     try {
-      const response = await fetch(SEED_NODE_URL, SWARM_STATE_OPTIONS);
+      const method = 'get_n_service_nodes';
+      const params = {
+        fields: {
+          public_ip: true,
+          storage_port: true,
+        },
+      }
+      const response = await fetch(SEED_NODE_URL, Network._getOptions(method, params));
       if (!response.ok) {
         throw new Error(`${response.status} response updating all nodes`);
       }
@@ -60,22 +66,11 @@ export class Network {
   }
 
   async getAccountSwarm(pubKey: string) {
-    const body = {
-      method: 'get_snodes_for_pubkey',
-      params: {
-        pubKey,
-      },
+    const method = 'get_snodes_for_pubkey';
+    const params = {
+      pubKey,
     };
-    const options = {
-      method: 'POST',
-      options: {
-        timeout: 5000,
-      },
-      body: JSON.stringify(body),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    };
+    const options = Network._getOptions(method, params);
     let nodeIdx;
     try {
       if (this.allNodes.length === 0) {
@@ -97,6 +92,30 @@ export class Network {
       console.log(`Error retrieving account swarm: ${e}`);
       this.allNodes.splice(nodeIdx, 1);
       return [];
+    }
+  }
+
+  async sendToSnode(message: Message, snode: Snode) {
+    const method = 'store';
+    const params = {
+      pubKey: message.pubKey,
+      ttl: message.ttl.toString(),
+      nonce: message.nonce,
+      timestamp: message.timestamp.toString(),
+      data: message.data,
+    };
+    const options = Network._getOptions(method, params);
+    try {
+      const url = `https://${snode.ip}:${snode.port}/storage_rpc/v1`;
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        console.log(`${response.status} response sending message to ${snode.ip}:${snode.port}`);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.log(`Error sending message to ${snode.ip}:${snode.port}: ${e}`);
+      return false;
     }
   }
 }

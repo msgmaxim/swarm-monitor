@@ -13,6 +13,10 @@ export class Snode {
   }
 
   async sendMessage(message: Message) {
-    console.log(`Sending message to snode ${this.ip}`);
+    const success = await this.network.sendToSnode(message, this);
+    if (success) {
+      message.markSent(this);
+    }
+    return success;
   }
 }

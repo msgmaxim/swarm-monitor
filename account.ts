@@ -10,13 +10,13 @@ const PUB_KEY_LEN = 64;
 export class Account {
   network: Network;
   pubKey: string;
-  messages: {};
+  messages: Set<Message>;
   swarm: Snode[];
 
   constructor() {
     this.network = new Network();
     this.pubKey = Account._generatePubKey();
-    this.messages = {};
+    this.messages = new Set();
     this.swarm = [];
   }
 
@@ -40,11 +40,10 @@ export class Account {
 
   async sendMessage() {
     const message = new Message(this.pubKey);
-    const ps: Promise<void>[] = [];
     await this._updateSwarm();
-    this.swarm.forEach(snode => {
-      ps.push(snode.sendMessage(message));
-    });
-    await Promise.all(ps);
+    const results = await Promise.all(this.swarm.map(async snode => snode.sendMessage(message)));
+    if (results.some(result => result === true)) {
+      this.messages.add(message);
+    };
   }
 }

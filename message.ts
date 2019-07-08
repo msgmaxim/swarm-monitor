@@ -1,5 +1,6 @@
 import { pow } from './proof-of-work';
 import { Network } from './network';
+import { Snode } from './snode';
 
 // Message data constants
 const DATA_CHARS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -15,6 +16,7 @@ export class Message {
   timestamp: number;
   ttl: number;
   nonce: string;
+  sentTo: Set<Snode>;
 
   constructor(pubKey: string) {
     this.network = new Network();
@@ -23,6 +25,7 @@ export class Message {
     this.timestamp = Message._generateTimestamp();
     this.ttl = 86400000; // 24 hours
     this.nonce = pow.calcPoW(this.timestamp, this.ttl, pubKey, this.data, DIFFICULTY);
+    this.sentTo = new Set();
   }
 
   private static _generateTimestamp() {
@@ -35,5 +38,9 @@ export class Message {
       data += DATA_CHARS.charAt(Math.floor(Math.random() * DATA_CHARS_LEN));
     }
     return data;
+  }
+
+  markSent(snode: Snode) {
+    this.sentTo.add(snode);
   }
 }
