@@ -16,8 +16,8 @@ export class Message {
   ttl: number;
   nonce: string;
 
-  constructor(network: Network, pubKey: string) {
-    this.network = network;
+  constructor(pubKey: string) {
+    this.network = new Network();
     this.pubKey = pubKey;
     this.data = Message._generateData();
     this.timestamp = Message._getTimestamp();

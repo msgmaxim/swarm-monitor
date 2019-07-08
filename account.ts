@@ -13,8 +13,8 @@ export class Account {
   messages: {};
   swarm: Snode[];
 
-  constructor(network: Network) {
-    this.network = network;
+  constructor() {
+    this.network = new Network();
     this.pubKey = Account._generatePubKey();
     this.messages = {};
     this.swarm = [];
@@ -39,7 +39,7 @@ export class Account {
   }
 
   async sendMessage() {
-    const message = new Message(this.network, this.pubKey);
+    const message = new Message(this.pubKey);
     const ps: Promise<void>[] = [];
     await this.updateSwarm();
     this.swarm.forEach(snode => {
