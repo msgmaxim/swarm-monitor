@@ -11,6 +11,7 @@
   "dependencies": {
     "bytebuffer": "^5.0.1",
     "jsbi": "^2.0.5",
+    "node-fetch": "^2.6.0",
     "typescript": "^3.5.2"
   },
   "devDependencies": {
