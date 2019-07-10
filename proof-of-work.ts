@@ -85,15 +85,19 @@ export const pow = {
     const innerPayload = new Uint8Array(initialHash.length + NONCE_LEN);
     innerPayload.set(initialHash, NONCE_LEN);
     let nextNonce = nonce;
+    let finalHash: string;
     while (pow.greaterThan(trialValue, target)) {
       nonce = nextNonce;
       nextNonce = pow.incrementNonce(nonce, increment);
       innerPayload.set(nonce);
       hash = crypto.createHash('sha512');
       hash.update(innerPayload);
-      trialValue = hash.digest().slice(0, NONCE_LEN);
+      const buf = hash.digest();
+      finalHash = buf.toString('hex');
+      trialValue = buf.slice(0, NONCE_LEN);
     }
-    return pow.bufferToBase64(nonce);
+    const result: [string, string] = [pow.bufferToBase64(nonce), finalHash];
+    return result;
   },
 
   calcTarget(ttl: number, payloadLen: number, difficulty: number) {

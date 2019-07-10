@@ -117,11 +117,11 @@ export class Network {
     }
   }
 
-  async retrieveFromSnode(snodeUrl: string, pubKey: string) {
+  async retrieveFromSnode(snodeUrl: string, pubKey: string, lastHash: string) {
     const method = 'retrieve';
     const params = {
       pubKey,
-      lastHash: '',
+      lastHash,
     };
     const options = Network._getOptions(method, params);
     try {
@@ -130,7 +130,8 @@ export class Network {
         throw new Error(`${response.status} response`);
       }
       const result = await response.json();
-      return result.messages;
+      const messages = result.messages;
+      return result.messages.map((msg: { hash: string; }) => msg.hash);
     } catch (e) {
       throw new Error(`Error retrieving messages from ${snodeUrl}: ${e}`);
     }

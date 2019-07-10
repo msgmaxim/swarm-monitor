@@ -6,12 +6,14 @@ export class Snode {
   ip: string;
   port: string;
   messagesHolding: number;
+  lastHash: string;
 
   constructor(ip: string, port: string) {
     this.network = new Network();
     this.ip = ip;
     this.port = port;
     this.messagesHolding = 0;
+    this.lastHash = '';
   }
 
   async sendMessage(message: Message) {
@@ -23,8 +25,21 @@ export class Snode {
     return success;
   }
 
-  async retrieveMessages(pubKey: string) {
+  async retrieveAllMessages(pubKey: string) {
+    let allMessages: Array<string> = [];
+    let complete = false;
+    while (!complete) {
+      const newMessages = await this._retrieveMessages(pubKey);
+      complete = newMessages < 10;
+      allMessages = allMessages.concat(newMessages);
+    }
+    return allMessages
+  }
+
+  private async _retrieveMessages(pubKey: string) {
     const url = `https://${this.ip}:${this.port}/storage_rpc/v1`;
-    return this.network.retrieveFromSnode(url, pubKey);
+    const messages = await this.network.retrieveFromSnode(url, pubKey, this.lastHash);
+    this.lastHash = messages[messages.length - 1];
+    return messages;
   }
 }

@@ -75,16 +75,13 @@ export class Account {
     };
   }
 
-  async retrieveMessages(snode: Snode) {
-    return snode.retrieveMessages(this.pubKey);
-  }
-
   async updateStats() {
     await Promise.all(this.swarm.map(async snode => {
       try {
-        const messages = await this.retrieveMessages(snode);
+        const messages = await snode.retrieveAllMessages(this.pubKey);
         snode.messagesHolding = messages.length;
       } catch (e) {
+        console.log(e);
       }
     }));
   }

@@ -16,6 +16,7 @@ export class Message {
   timestamp: number;
   ttl: number;
   nonce: string;
+  hash: string;
   sentTo: Set<Snode>;
 
   constructor(pubKey: string) {
@@ -24,7 +25,7 @@ export class Message {
     this.data = Message._generateData();
     this.timestamp = Message._generateTimestamp();
     this.ttl = 86400000; // 24 hours
-    this.nonce = pow.calcPoW(this.timestamp, this.ttl, pubKey, this.data, DIFFICULTY);
+    [this.nonce, this.hash] = pow.calcPoW(this.timestamp, this.ttl, pubKey, this.data, DIFFICULTY);
     this.sentTo = new Set();
   }
 
