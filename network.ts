@@ -65,6 +65,7 @@ export class Network {
     }
   }
 
+  async getAccountSwarm(pubKey: string): Promise<Snode[]>;
   async getAccountSwarm(pubKey: string) {
     const method = 'get_snodes_for_pubkey';
     const params = {
@@ -82,7 +83,7 @@ export class Network {
       if (!response.ok) {
         console.log(`${response.status} response retrieving account swarm`);
         this.allNodes.splice(nodeIdx, 1);
-        return [];
+        return this.getAccountSwarm(pubKey);
       }
       const { snodes } = await response.json();
       return snodes
@@ -91,11 +92,11 @@ export class Network {
     } catch (e) {
       console.log(`Error retrieving account swarm: ${e}`);
       this.allNodes.splice(nodeIdx, 1);
-      return [];
+      return this.getAccountSwarm(pubKey);
     }
   }
 
-  async sendToSnode(message: Message, snode: Snode) {
+  async sendToSnode(snodeUrl: string, message: Message) {
     const method = 'store';
     const params = {
       pubKey: message.pubKey,
@@ -106,16 +107,32 @@ export class Network {
     };
     const options = Network._getOptions(method, params);
     try {
-      const url = `https://${snode.ip}:${snode.port}/storage_rpc/v1`;
-      const response = await fetch(url, options);
+      const response = await fetch(snodeUrl, options);
       if (!response.ok) {
-        console.log(`${response.status} response sending message to ${snode.ip}:${snode.port}`);
         return false;
       }
       return true;
     } catch (e) {
-      console.log(`Error sending message to ${snode.ip}:${snode.port}: ${e}`);
       return false;
+    }
+  }
+
+  async retrieveFromSnode(snodeUrl: string, pubKey: string) {
+    const method = 'retrieve';
+    const params = {
+      pubKey,
+      lastHash: '',
+    };
+    const options = Network._getOptions(method, params);
+    try {
+      const response = await fetch(snodeUrl, options);
+      if (!response.ok) {
+        throw new Error(`${response.status} response`);
+      }
+      const result = await response.json();
+      return result.messages;
+    } catch (e) {
+      throw new Error(`Error retrieving messages from ${snodeUrl}: ${e}`);
     }
   }
 }
