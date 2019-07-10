@@ -87,8 +87,5 @@ typings/
 # DynamoDB Local files
 .dynamodb/
 
-# vscode Local files
-.vscode/
-
 # Typescript build files
 out/
