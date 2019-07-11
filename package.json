@@ -9,12 +9,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "async": "^3.1.0",
     "bytebuffer": "^5.0.1",
     "jsbi": "^2.0.5",
     "node-fetch": "^2.6.0",
     "typescript": "^3.5.2"
   },
   "devDependencies": {
+    "@types/async": "^3.0.0",
     "@types/bytebuffer": "^5.0.40",
     "@types/node": "^12.0.12",
     "@types/node-fetch": "^2.3.7"

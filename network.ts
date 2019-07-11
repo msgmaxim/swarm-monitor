@@ -1,14 +1,17 @@
 import fetch from 'node-fetch';
+import nodeAsync from 'async';
 
 import { Snode } from './snode';
 import { Message } from './message';
 
 // Seed node endpoint
 const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
+const CONCURRENT_REQUESTS = 2000;
 
 export class Network {
   static instance: Network;
   allNodes: Snode[];
+  queue: nodeAsync.AsyncQueue<any>;
 
   constructor() {
     if (!!Network.instance) {
@@ -17,6 +20,15 @@ export class Network {
     process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = '0';
     this.allNodes = [];
     Network.instance = this;
+    this.queue = nodeAsync.queue(async (task, callback) => {
+      try {
+        await task();
+      } catch (e) {
+        callback(e);
+        return;
+      }
+      callback();
+    }, CONCURRENT_REQUESTS);
     return this;
   }
 
@@ -39,6 +51,23 @@ export class Network {
     };
   }
 
+  private _makeRequest(url: string, options: any): Promise<Response>;
+  private _makeRequest(url: string, options: any) {
+    return new Promise((resolve, reject) => {
+      this.queue.push(
+        async () => {
+          const response = await fetch(url, options);
+          resolve(response);
+        },
+        err => {
+          if (err) {
+            reject(err);
+          }
+        }
+      );
+    })
+  }
+
   private async _updateAllNodes() {
     try {
       const method = 'get_n_service_nodes';
@@ -48,11 +77,10 @@ export class Network {
           storage_port: true,
         },
       }
-      const response = await fetch(SEED_NODE_URL, Network._getOptions(method, params));
+      const response = await this._makeRequest(SEED_NODE_URL, Network._getOptions(method, params));
       if (!response.ok) {
         throw new Error(`${response.status} response updating all nodes`);
       }
-      const network = new Network();
       const result = await response.json();
       this.allNodes = result.result.service_node_states
         .filter((snode: { public_ip: string; }) => snode.public_ip !== '0.0.0.0')
@@ -79,7 +107,7 @@ export class Network {
       }
       nodeIdx = Math.floor(Math.random() * this.allNodes.length);
       const url = `https://${this.allNodes[nodeIdx].ip}:${this.allNodes[nodeIdx].port}/storage_rpc/v1`;
-      const response = await fetch(url, options);
+      const response = await this._makeRequest(url, options);
       if (!response.ok) {
         console.log(`${response.status} response retrieving account swarm`);
         this.allNodes.splice(nodeIdx, 1);
@@ -107,7 +135,7 @@ export class Network {
     };
     const options = Network._getOptions(method, params);
     try {
-      const response = await fetch(snodeUrl, options);
+      const response = await this._makeRequest(snodeUrl, options);
       if (!response.ok) {
         return false;
       }
@@ -125,7 +153,7 @@ export class Network {
     };
     const options = Network._getOptions(method, params);
     try {
-      const response = await fetch(snodeUrl, options);
+      const response = await this._makeRequest(snodeUrl, options);
       if (!response.ok) {
         throw new Error(`${response.status} response`);
       }

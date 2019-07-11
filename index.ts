@@ -55,7 +55,12 @@ const commandMode = () => {
 
       case COMMANDS.sendBurst:
         console.log('Sending bursts...');
-        await Promise.all(accounts.map(async a => await a.sendBurst()));
+        try {
+          await Promise.all(accounts.map(async a => await a.sendBurst()));
+        } catch (e) {
+          console.log(`Error sending bursts: ${e}`)
+          break;
+        }
         console.log('Bursts sent...');
         break;
 
