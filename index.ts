@@ -36,6 +36,7 @@ const commandMode = () => {
   process.stdin.setEncoding('utf8');
 
   process.stdin.on('data', async (data: string) => {
+    process.stdin.pause();
     const input = data.trim().split(' ');
     const command = input[0];
     switch (command) {
@@ -73,6 +74,7 @@ const commandMode = () => {
         console.log(`${command} is not a valid command, please use one of [${Object.values(COMMANDS).join(', ')}]`);
         break;
     }
+    process.stdin.resume();
   });
 }
 
