@@ -28,9 +28,10 @@ export class Snode {
   async retrieveAllMessages(pubKey: string) {
     let allMessages: Array<string> = [];
     let complete = false;
+    this.lastHash = '';
     while (!complete) {
       const newMessages = await this._retrieveMessages(pubKey);
-      complete = newMessages < 10;
+      complete = newMessages.length < 10;
       allMessages = allMessages.concat(newMessages);
     }
     return allMessages

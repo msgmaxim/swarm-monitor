@@ -6,7 +6,7 @@ import { Message } from './message';
 
 // Seed node endpoint
 const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
-const CONCURRENT_REQUESTS = 2000;
+const CONCURRENT_REQUESTS = 1000;
 
 export class Network {
   static instance: Network;
