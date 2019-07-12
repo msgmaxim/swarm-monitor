@@ -3,6 +3,7 @@ import nodeAsync from 'async';
 
 import { Snode } from './snode';
 import { Message } from './message';
+import { NodeStats } from './stats'
 
 // Seed node endpoint
 const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
@@ -68,7 +69,7 @@ export class Network {
     })
   }
 
-  async updateAllNodes() {
+  private async _updateAllNodes() {
     try {
       const method = 'get_n_service_nodes';
       const params = {
@@ -94,6 +95,30 @@ export class Network {
     }
   }
 
+  async getAllNodes() {
+    if (this.allNodes.length === 0) {
+      await this._updateAllNodes();
+    }
+    return this.allNodes;
+  }
+
+  async getStats(sn : Snode) {
+
+    const url = `https://${sn.ip}:${sn.port}/get_stats/v1`
+
+    try {
+      const response = await fetch(url, {timeout: 2000});
+      if (!response.ok) {
+        return new NodeStats(sn.pubkey, sn.ip, sn.port, 0,0,0);
+      }
+      let res = await response.json();
+
+      return new NodeStats(sn.pubkey, sn.ip, sn.port, res.client_store_requests, res.client_retrieve_requests, res.reset_time);
+    } catch (e) {
+      return new NodeStats(sn.pubkey, sn.ip, sn.port, 0,0,0);
+    }
+  }
+
   async getAccountSwarm(pubKey: string): Promise<Snode[]>;
   async getAccountSwarm(pubKey: string) {
     const method = 'get_snodes_for_pubkey';
@@ -104,7 +129,7 @@ export class Network {
     let nodeIdx;
     try {
       if (this.allNodes.length === 0) {
-        await this.updateAllNodes();
+        await this._updateAllNodes();
       }
       nodeIdx = Math.floor(Math.random() * this.allNodes.length);
       const url = `https://${this.allNodes[nodeIdx].ip}:${this.allNodes[nodeIdx].port}/storage_rpc/v1`;

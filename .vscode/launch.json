@@ -12,6 +12,26 @@
       "outFiles": [
         "${workspaceFolder}/**/*.js"
       ]
-    }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch get_stats",
+      "program": "${workspaceFolder}/index.ts",
+      "args": ["get_stats"],
+      "outFiles": [
+        "${workspaceFolder}/**/*.js"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch poll_stats",
+      "program": "${workspaceFolder}/index.ts",
+      "args": ["poll_stats"],
+      "outFiles": [
+        "${workspaceFolder}/**/*.js"
+      ]
+    },
   ]
 }
