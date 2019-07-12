@@ -1,19 +1,39 @@
 import { Network } from './network';
 import { Message } from './message';
 
+const multibase = require('multibase');
+
+const hexIndex = multibase.names.indexOf('base16');
+const hexCode = multibase.codes[hexIndex];
+
+const base32zIndex = multibase.names.indexOf('base32z');
+const base32zCode = multibase.codes[base32zIndex];
+
+
 export class Snode {
   network: Network;
+  pubkey: string;
   ip: string;
   port: string;
   messagesHolding: number;
   lastHash: string;
 
-  constructor(ip: string, port: string) {
+  constructor(pubkey: string, ip: string, port: string) {
+    this.pubkey = pubkey;
     this.network = new Network();
     this.ip = ip;
     this.port = port;
     this.messagesHolding = 0;
     this.lastHash = '';
+  }
+
+  static hexToSnodeAddress(hexAddress: string) {
+    const buf = multibase.decode(`${hexCode}${hexAddress}`);
+    const snodeAddress = multibase
+      .encode(base32zCode, buf)
+      .slice(1)
+      .toString('utf8');
+    return snodeAddress;
   }
 
   async sendMessage(message: Message) {

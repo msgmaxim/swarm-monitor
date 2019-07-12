@@ -68,13 +68,14 @@ export class Network {
     })
   }
 
-  private async _updateAllNodes() {
+  async updateAllNodes() {
     try {
       const method = 'get_n_service_nodes';
       const params = {
         fields: {
           public_ip: true,
           storage_port: true,
+          service_node_pubkey: true,
         },
       }
       const response = await this._makeRequest(SEED_NODE_URL, Network._getOptions(method, params));
@@ -84,7 +85,7 @@ export class Network {
       const result = await response.json();
       this.allNodes = result.result.service_node_states
         .filter((snode: { public_ip: string; }) => snode.public_ip !== '0.0.0.0')
-        .map((snode: { public_ip: any; storage_port: any; }) => new Snode(snode.public_ip, snode.storage_port));
+        .map((snode: { public_ip: any; storage_port: any; service_node_pubkey: any }) => new Snode(Snode.hexToSnodeAddress(snode.service_node_pubkey), snode.public_ip, snode.storage_port));
       if (this.allNodes.length === 0) {
         throw new Error(`Error updating all nodes, couldn't get any valid ips`);
       }
@@ -103,7 +104,7 @@ export class Network {
     let nodeIdx;
     try {
       if (this.allNodes.length === 0) {
-        await this._updateAllNodes();
+        await this.updateAllNodes();
       }
       nodeIdx = Math.floor(Math.random() * this.allNodes.length);
       const url = `https://${this.allNodes[nodeIdx].ip}:${this.allNodes[nodeIdx].port}/storage_rpc/v1`;
@@ -116,7 +117,8 @@ export class Network {
       const { snodes } = await response.json();
       return snodes
         .filter((snode: { ip: string; }) => snode.ip !== '0.0.0.0')
-        .map((snode: { ip: any; port: any; }) => new Snode(snode.ip, snode.port));
+        .map((snode: { address: string; ip: any; port: any; }) =>
+          new Snode(snode.address.slice(0, snode.address.length - '.snode'.length), snode.ip, snode.port));
     } catch (e) {
       console.log(`Error retrieving account swarm: ${e}`);
       this.allNodes.splice(nodeIdx, 1);
