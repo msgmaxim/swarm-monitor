@@ -3,11 +3,13 @@ import { Message } from './message';
 
 export class Snode {
   network: Network;
+  pubkey: string;
   ip: string;
   port: string;
   messagesHolding: number;
 
-  constructor(ip: string, port: string) {
+  constructor(pubkey: string, ip: string, port: string) {
+    this.pubkey = pubkey;
     this.network = new Network();
     this.ip = ip;
     this.port = port;
