@@ -3,6 +3,7 @@ import nodeAsync from 'async';
 
 import { Snode } from './snode';
 import { Message } from './message';
+import { NodeStats } from './stats'
 
 // Seed node endpoint
 const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
@@ -75,6 +76,7 @@ export class Network {
         fields: {
           public_ip: true,
           storage_port: true,
+          service_node_pubkey: true,
         },
       }
       const response = await this._makeRequest(SEED_NODE_URL, Network._getOptions(method, params));
@@ -84,12 +86,36 @@ export class Network {
       const result = await response.json();
       this.allNodes = result.result.service_node_states
         .filter((snode: { public_ip: string; }) => snode.public_ip !== '0.0.0.0')
-        .map((snode: { public_ip: any; storage_port: any; }) => new Snode(snode.public_ip, snode.storage_port));
+        .map((snode: { public_ip: any; storage_port: any; service_node_pubkey: any }) => new Snode(Snode.hexToSnodeAddress(snode.service_node_pubkey), snode.public_ip, snode.storage_port));
       if (this.allNodes.length === 0) {
         throw new Error(`Error updating all nodes, couldn't get any valid ips`);
       }
     } catch (e) {
       throw new Error(`Error updating all nodes: ${e}`);
+    }
+  }
+
+  async getAllNodes() {
+    if (this.allNodes.length === 0) {
+      await this._updateAllNodes();
+    }
+    return this.allNodes;
+  }
+
+  async getStats(sn : Snode) {
+
+    const url = `https://${sn.ip}:${sn.port}/get_stats/v1`
+
+    try {
+      const response = await fetch(url, {timeout: 2000});
+      if (!response.ok) {
+        return new NodeStats(sn.pubkey, sn.ip, sn.port, 0,0,0);
+      }
+      let res = await response.json();
+
+      return new NodeStats(sn.pubkey, sn.ip, sn.port, res.client_store_requests, res.client_retrieve_requests, res.reset_time);
+    } catch (e) {
+      return new NodeStats(sn.pubkey, sn.ip, sn.port, 0,0,0);
     }
   }
 
@@ -116,7 +142,8 @@ export class Network {
       const { snodes } = await response.json();
       return snodes
         .filter((snode: { ip: string; }) => snode.ip !== '0.0.0.0')
-        .map((snode: { ip: any; port: any; }) => new Snode(snode.ip, snode.port));
+        .map((snode: { address: string; ip: any; port: any; }) =>
+          new Snode(snode.address.slice(0, snode.address.length - '.snode'.length), snode.ip, snode.port));
     } catch (e) {
       console.log(`Error retrieving account swarm: ${e}`);
       this.allNodes.splice(nodeIdx, 1);

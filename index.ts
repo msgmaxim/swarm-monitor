@@ -1,15 +1,20 @@
 import { Account } from './account';
+import { Network } from './network';
+import { NodeStats } from './stats'
 
 const COMMANDS = {
   update: 'update_stats',
-  print: 'print_stats',
+  accStats: 'acc_stats',
+  snodeStats: 'snode_stats',
   sendBurst: 'send_burst',
   addAccs: 'add_accounts',
 };
 const START_MODES = {
   command: 'command',
+  snodeStats: 'snode_stats',
 };
 const NUM_ACCOUNTS = 10;
+
 const accounts: Account[] = [];
 
 const sleep = (ms: number) => {
@@ -30,6 +35,43 @@ const defaultMode = async () => {
   accounts.map(a => a.printStats());
 }
 
+const getSnodeStats = async () => {
+
+  const network = new Network;
+
+  const nodes = await network.getAllNodes();
+
+  let results = await Promise.all(nodes.map(async a => await network.getStats(a)));
+
+  const online_count = results.reduce((acc, x) => acc += (x.reset_time !== 0 ? 1 : 0), 0);
+
+  console.log(`Nodes online: ${online_count}/${nodes.length}`);
+
+  NodeStats.printLifetimeStats(results);
+
+  await sleep(60000); // 1 min
+
+  /// save to a map
+  let prev_results = new Map<string, NodeStats>();
+
+  results.forEach(x => {
+      prev_results.set(x.pubkey, x);
+  });
+
+
+  let results_2 = await Promise.all(nodes.map(async a => await network.getStats(a)));
+
+  let cur_results = new Map<string, NodeStats>();
+
+  results_2.forEach(x => {
+    cur_results.set(x.pubkey, x);
+  });
+
+  console.log("Difference:");
+
+  NodeStats.printDiff(prev_results, cur_results);
+}
+
 const commandMode = () => {
   console.log(`Starting in command mode, possible commands:\n\n[${Object.values(COMMANDS).join(', ')}]`);
   process.stdin.resume();
@@ -46,10 +88,16 @@ const commandMode = () => {
         console.log('Stats updated');
         break;
 
-      case COMMANDS.print:
+      case COMMANDS.accStats:
         console.log('Printing account stats...');
         await Promise.all(accounts.map(async a => await a.updateStats()));
         accounts.map(a => a.printStats());
+        console.log('Printing complete...');
+        break;
+
+      case COMMANDS.snodeStats:
+        console.log('Printing snode stats...');
+        await getSnodeStats();
         console.log('Printing complete...');
         break;
 
@@ -94,6 +142,10 @@ switch (mode) {
 
   case START_MODES.command:
     commandMode();
+    break;
+
+  case START_MODES.snodeStats:
+    getSnodeStats();
     break;
 
   default:
