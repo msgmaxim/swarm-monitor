@@ -164,6 +164,9 @@ export class Network {
     try {
       const response = await this._makeRequest(snodeUrl, options);
       if (!response.ok) {
+        if (response.status === 429) {
+          console.log(`Rate limiited by ${snodeUrl}`);
+        }
         return false;
       }
       return true;

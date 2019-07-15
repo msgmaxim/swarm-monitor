@@ -1,6 +1,7 @@
 import { Message } from './message';
 import { Network } from './network';
 import { Snode } from './snode';
+import { sleep, firstTrue } from './utils';
 
 // Pubkey constants
 const PUB_KEY_CHARS = '0123456789abcdef';
@@ -8,10 +9,8 @@ const PUB_KEY_CHARS_LEN = PUB_KEY_CHARS.length;
 const PUB_KEY_LEN = 64;
 const MIN_MSG_SIZE = 20;
 const MAX_MSG_SIZE = 3000;
-const MIN_BURST_SIZE = 5;
-const MAX_BURST_SIZE = 50;
-const MIN_BURST_INTERVAL = 10000;
-const MAX_BURST_INTERVAL = 60000;
+const MIN_MSG_INTERVAL = 1;
+const MAX_MSG_INTERVAL = 500;
 
 const randomIntFromInterval = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min + 1) + min);
@@ -21,19 +20,15 @@ export class Account {
   network: Network;
   pubKey: string;
   messages: Set<Message>;
-  swarm: Snode[];
   messageSize: number;
-  burstInterval: number;
-  burstSize: number;
+  sendInterval: number;
 
-  constructor({ messageSize, burstInterval, burstSize }: { messageSize?: any; burstInterval?: any; burstSize?: any; } = {}) {
+  constructor({ messageSize, sendInterval }: { messageSize?: number; sendInterval?: number; } = {}) {
     this.network = new Network();
     this.pubKey = Account._generatePubKey();
     this.messages = new Set();
-    this.swarm = [];
     this.messageSize = messageSize || randomIntFromInterval(MIN_MSG_SIZE, MAX_MSG_SIZE);
-    this.burstSize = burstSize || randomIntFromInterval(MIN_BURST_SIZE, MAX_BURST_SIZE);
-    this.burstInterval = burstInterval || randomIntFromInterval(MIN_BURST_INTERVAL, MAX_BURST_INTERVAL);
+    this.sendInterval = sendInterval || randomIntFromInterval(MIN_MSG_INTERVAL, MAX_MSG_INTERVAL);
   }
 
   private static _generatePubKey() {
@@ -44,39 +39,33 @@ export class Account {
     return pubKey;
   }
 
-  private async _updateSwarm(attempts: number = 0) {
+  async getSwarm(attempts?: number): Promise<Array<Snode>>
+  async getSwarm(attempts = 0) {
     if (attempts >= 10) {
       throw new Error(`Couldn't update swarm for ${this.pubKey}`);
     }
-    this.swarm = await this.network.getAccountSwarm(this.pubKey);
-    if (this.swarm.length === 0) {
-      await this._updateSwarm(attempts + 1);
+    const swarm = await this.network.getAccountSwarm(this.pubKey);
+    if (swarm.length === 0) {
+      return this.getSwarm(attempts + 1);
+    }
+    return swarm;
+  }
+
+  async sendMessages(swarm: Array<Snode>, num = 1) {
+    for (let i = 0; i < num; i += 1) {
+      const message = new Message(this.pubKey);
+      const success = await firstTrue(swarm.map(snode => snode.sendMessage(message)));
+      if (success) {
+        this.messages.add(message);
+      } else {
+        console.log(`Failed to send message to whole swarm at ${message.timestamp}`);
+      };
+      await sleep(this.sendInterval);
     }
   }
 
-  async sendBurst() {
-    await this._updateSwarm();
-    return Promise.all(
-      Array(this.burstSize)
-        .fill(this.burstSize)
-        .map(_ => {
-          this.sendMessage();
-        })
-    );
-  }
-
-  async sendMessage() {
-    const message = new Message(this.pubKey);
-    const results = await Promise.all(this.swarm.map(async snode => snode.sendMessage(message)));
-    if (results.some(result => result === true)) {
-      this.messages.add(message);
-    } else {
-      console.log(`Failed to send message to whole swarm at ${message.timestamp}`);
-    };
-  }
-
-  async updateStats() {
-    await Promise.all(this.swarm.map(async snode => {
+  async updateStats(swarm: Array<Snode>) {
+    await Promise.all(swarm.map(async snode => {
       try {
         const messages = await snode.retrieveAllMessages(this.pubKey);
         snode.messagesHolding = messages.length;
@@ -86,10 +75,10 @@ export class Account {
     }));
   }
 
-  printStats() {
+  printStats(swarm: Array<Snode>) {
     let inconsistent = false;
     const shouldHave = this.messages.size;
-    this.swarm.forEach(snode => {
+    swarm.forEach(snode => {
       if (snode.messagesHolding !== shouldHave) {
         if (!inconsistent) {
           inconsistent = true;

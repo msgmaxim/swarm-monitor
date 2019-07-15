@@ -11,17 +11,30 @@
       "program": "${workspaceFolder}/index.ts",
       "outFiles": [
         "${workspaceFolder}/**/*.js"
-      ]
+      ],
+      "console": "integratedTerminal",
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch get_stats",
+      "name": "Launch command",
       "program": "${workspaceFolder}/index.ts",
-      "args": ["get_stats"],
+      "args": ["command"],
       "outFiles": [
         "${workspaceFolder}/**/*.js"
-      ]
+      ],
+      "console": "integratedTerminal",
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch snode_stats",
+      "program": "${workspaceFolder}/index.ts",
+      "args": ["snode_stats"],
+      "outFiles": [
+        "${workspaceFolder}/**/*.js"
+      ],
+      "console": "integratedTerminal",
     },
   ]
 }

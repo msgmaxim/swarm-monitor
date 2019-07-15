@@ -1,13 +1,14 @@
 import { Account } from './account';
 import { Network } from './network';
-import { NodeStats } from './stats'
+import { NodeStats } from './stats';
+import { sleep } from './utils';
 
 const COMMANDS = {
   update: 'update_stats',
   accStats: 'acc_stats',
   snodeStats: 'snode_stats',
-  sendBurst: 'send_burst',
   addAccs: 'add_accounts',
+  send: 'send',
 };
 const START_MODES = {
   command: 'command',
@@ -16,12 +17,7 @@ const START_MODES = {
 const NUM_ACCOUNTS = 10;
 
 const accounts: Account[] = [];
-
-const sleep = (ms: number) => {
-  return new Promise(resolve => {
-    setTimeout(resolve,ms)
-  });
-}
+const network = new Network;
 
 const defaultMode = async () => {
   Array(NUM_ACCOUNTS)
@@ -29,15 +25,17 @@ const defaultMode = async () => {
     .map(_ => {
       accounts.push(new Account());
     });
-  await Promise.all(accounts.map(async a => await a.sendBurst()));
-  await sleep(5000);
-  await Promise.all(accounts.map(async a => await a.updateStats()));
-  accounts.map(a => a.printStats());
+  await Promise.all(accounts.map(async a => {
+    const allNodes = await network.getAllNodes();
+    const swarm = await a.getSwarm();
+    await a.sendMessages(swarm)
+    await sleep(5000);
+    await a.updateStats(swarm);
+    a.printStats(swarm);
+  }));
 }
 
 const getSnodeStats = async () => {
-
-  const network = new Network;
 
   const nodes = await network.getAllNodes();
 
@@ -55,7 +53,7 @@ const getSnodeStats = async () => {
   let prev_results = new Map<string, NodeStats>();
 
   results.forEach(x => {
-      prev_results.set(x.pubkey, x);
+    prev_results.set(x.pubkey, x);
   });
 
 
@@ -84,14 +82,20 @@ const commandMode = () => {
     switch (command) {
       case COMMANDS.update:
         console.log('Updating stats...');
-        await Promise.all(accounts.map(async a => await a.updateStats()));
+        await Promise.all(accounts.map(async a => {
+          const swarm = await a.getSwarm();
+          await a.updateStats(swarm);
+        }));
         console.log('Stats updated');
         break;
 
       case COMMANDS.accStats:
         console.log('Printing account stats...');
-        await Promise.all(accounts.map(async a => await a.updateStats()));
-        accounts.map(a => a.printStats());
+        await Promise.all(accounts.map(async a => {
+          const swarm = await a.getSwarm();
+          await a.updateStats(swarm)
+          await a.printStats(swarm)
+        }));
         console.log('Printing complete...');
         break;
 
@@ -101,15 +105,19 @@ const commandMode = () => {
         console.log('Printing complete...');
         break;
 
-      case COMMANDS.sendBurst:
-        console.log('Sending bursts...');
+      case COMMANDS.send:
+        const n = input[1] && parseInt(input[1]) !== NaN ? parseInt(input[1]) : 1;
+        console.log(`Accounts sending ${n} message${n === 1 ? '' : 's'}...`);
         try {
-          await Promise.all(accounts.map(async a => await a.sendBurst()));
+          await Promise.all(accounts.map(async a => {
+            const swarm = await a.getSwarm();
+            await a.sendMessages(swarm, n);
+          }));
         } catch (e) {
-          console.log(`Error sending bursts: ${e}`)
+          console.log(`Error sending messages: ${e}`)
           break;
         }
-        console.log('Bursts sent...');
+        console.log('Messages sent...');
         break;
 
       case COMMANDS.addAccs:
