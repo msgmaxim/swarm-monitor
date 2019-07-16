@@ -3,7 +3,7 @@ import nodeAsync from 'async';
 
 import { Snode } from './snode';
 import { Message } from './message';
-import { NodeStats } from './stats'
+import { NodeStats, PeerStats } from './stats'
 
 // Seed node endpoint
 const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
@@ -13,7 +13,6 @@ export class Network {
   static instance: Network;
   allNodes: Snode[];
   queue: nodeAsync.AsyncQueue<any>;
-
   constructor() {
     if (!!Network.instance) {
       return Network.instance;
@@ -77,6 +76,7 @@ export class Network {
           public_ip: true,
           storage_port: true,
           service_node_pubkey: true,
+          swarm_id: true,
         },
       }
       const response = await this._makeRequest(SEED_NODE_URL, Network._getOptions(method, params));
@@ -86,7 +86,7 @@ export class Network {
       const result = await response.json();
       this.allNodes = result.result.service_node_states
         .filter((snode: { public_ip: string; }) => snode.public_ip !== '0.0.0.0')
-        .map((snode: { public_ip: any; storage_port: any; service_node_pubkey: any }) => new Snode(Snode.hexToSnodeAddress(snode.service_node_pubkey), snode.public_ip, snode.storage_port));
+        .map((snode: { public_ip: any; storage_port: any; service_node_pubkey: any; swarm_id: string; }) => new Snode(Snode.hexToSnodeAddress(snode.service_node_pubkey), snode.public_ip, snode.storage_port, snode.swarm_id));
       if (this.allNodes.length === 0) {
         throw new Error(`Error updating all nodes, couldn't get any valid ips`);
       }
@@ -102,20 +102,26 @@ export class Network {
     return this.allNodes;
   }
 
-  async getStats(sn : Snode) {
+  async getStats(sn: Snode) {
 
     const url = `https://${sn.ip}:${sn.port}/get_stats/v1`
 
     try {
-      const response = await fetch(url, {timeout: 2000});
+      const response = await fetch(url, { timeout: 2000 });
       if (!response.ok) {
-        return new NodeStats(sn.pubkey, sn.ip, sn.port, 0,0,0);
+        return new NodeStats(sn.pubkey, sn.ip, sn.port, 0, 0, 0, sn.swarm_id);
       }
       let res = await response.json();
 
-      return new NodeStats(sn.pubkey, sn.ip, sn.port, res.client_store_requests, res.client_retrieve_requests, res.reset_time);
+      let stats = new NodeStats(sn.pubkey, sn.ip, sn.port, res.client_store_requests, res.client_retrieve_requests, res.reset_time, sn.swarm_id);
+      for (let peer in res.peers) {
+        let val = res.peers[peer];
+        let peer_stats = new PeerStats(peer, val.pushes_failed, val.requests_failed);
+        stats.add_peer_stats(peer_stats);
+      }
+      return stats;
     } catch (e) {
-      return new NodeStats(sn.pubkey, sn.ip, sn.port, 0,0,0);
+      return new NodeStats(sn.pubkey, sn.ip, sn.port, 0, 0, 0, sn.swarm_id);
     }
   }
 
@@ -142,8 +148,8 @@ export class Network {
       const { snodes } = await response.json();
       return snodes
         .filter((snode: { ip: string; }) => snode.ip !== '0.0.0.0')
-        .map((snode: { address: string; ip: any; port: any; }) =>
-          new Snode(snode.address.slice(0, snode.address.length - '.snode'.length), snode.ip, snode.port));
+        .map((snode: { address: string; ip: any; port: any; swarm_id: any; }) =>
+          new Snode(snode.address.slice(0, snode.address.length - '.snode'.length), snode.ip, snode.port, snode.swarm_id));
     } catch (e) {
       console.log(`Error retrieving account swarm: ${e}`);
       this.allNodes.splice(nodeIdx, 1);
