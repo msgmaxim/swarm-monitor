@@ -35,6 +35,10 @@ const defaultMode = async () => {
   }));
 }
 
+const printCommands = () => {
+  console.log(`Commands: [${Object.values(COMMANDS).join(', ')}]`);
+}
+
 const getSnodeStats = async () => {
 
   const nodes = await network.getAllNodes();
@@ -93,16 +97,16 @@ const commandMode = () => {
         console.log('Printing account stats...');
         await Promise.all(accounts.map(async a => {
           const swarm = await a.getSwarm();
-          await a.updateStats(swarm)
-          await a.printStats(swarm)
+          await a.updateStats(swarm);
+          await a.printStats(swarm);
         }));
-        console.log('Printing complete...');
+        console.log('Printing complete');
         break;
 
       case COMMANDS.snodeStats:
         console.log('Printing snode stats...');
         await getSnodeStats();
-        console.log('Printing complete...');
+        console.log('Printing complete');
         break;
 
       case COMMANDS.send:
@@ -114,10 +118,10 @@ const commandMode = () => {
             await a.sendMessages(swarm, n);
           }));
         } catch (e) {
-          console.log(`Error sending messages: ${e}`)
+          console.log(`Error sending messages: ${e}`);
           break;
         }
-        console.log('Messages sent...');
+        console.log('Messages sent');
         break;
 
       case COMMANDS.addAccs:
@@ -128,13 +132,15 @@ const commandMode = () => {
           .map(_ => {
             accounts.push(new Account());
           });
-        console.log(`Account${num === 1 ? '' : 's'} created...`);
+        console.log(`Account${num === 1 ? '' : 's'} created`);
         break;
 
       default:
         console.log(`${command} is not a valid command, please use one of [${Object.values(COMMANDS).join(', ')}]`);
-        break;
+        process.stdin.resume();
+        return;
     }
+    printCommands();
     process.stdin.resume();
   });
 }

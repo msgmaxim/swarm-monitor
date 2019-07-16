@@ -1,7 +1,7 @@
 import { Message } from './message';
 import { Network } from './network';
 import { Snode } from './snode';
-import { sleep, firstTrue } from './utils';
+import { sleep, firstTrue, getRandom } from './utils';
 
 // Pubkey constants
 const PUB_KEY_CHARS = '0123456789abcdef';
@@ -52,9 +52,10 @@ export class Account {
   }
 
   async sendMessages(swarm: Array<Snode>, num = 1) {
+    const subSwarm: Array<Snode> = getRandom(swarm, 3);
     for (let i = 0; i < num; i += 1) {
       const message = new Message(this.pubKey);
-      const success = await firstTrue(swarm.map(snode => snode.sendMessage(message)));
+      const success = await firstTrue(subSwarm.map(snode => snode.sendMessage(message)));
       if (success) {
         this.messages.add(message);
       } else {
@@ -86,6 +87,9 @@ export class Account {
         }
         console.log(`Snode ${snode.ip}:${snode.port} should have ${shouldHave} but has ${snode.messagesHolding}`);
       }
-    })
+    });
+    if (!inconsistent) {
+      console.log(`Account ${this.pubKey} has all ${shouldHave} messages in swarm`);
+    }
   }
 }
