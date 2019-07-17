@@ -96,6 +96,44 @@ export const printLifetimeStats = (results: NodeStats[]) => {
 
 }
 
+export const printDiff = (prev: Map<string, NodeStats>, cur: Map<string, NodeStats>) => {
+
+    const margin = "  ";
+    let header = '';
+    header += "PubKey".padStart(16) + margin;
+    header += "IP".padStart(16) + margin;
+    header += "Port".padStart(5) + margin;
+    header += "Uptime".padStart(12) + margin;
+    header += "Store".padStart(10) + margin;
+    header += "Retrieve".padStart(10) + margin;
+    console.log(header);
+    console.log("-".repeat(header.length))
+
+    prev.forEach(x => {
+        let line = '';
+        line += x.pubkey.substr(0, 16).padStart(16) + margin;
+        line += x.ip.padStart(16) + margin;
+        line += x.port.toString().padStart(5) + margin;
+
+        if (x.reset_time !== 0) {
+
+            const uptime = "";
+            const store_diff = cur.get(x.pubkey).client_store_requests - x.client_store_requests;
+            const store_diff_str = store_diff.toLocaleString();
+
+            const retrieve_diff = cur.get(x.pubkey).client_retrieve_requests - x.client_retrieve_requests;
+            const retrieve_diff_str = retrieve_diff.toLocaleString();
+
+            line += uptime.padStart(12) + margin;
+            line += store_diff_str.padStart(10) + margin;
+            line += retrieve_diff_str.padStart(10) + margin;
+
+        }
+
+        console.log(line);
+    });
+}
+
 export class NodeStats {
     pubkey: string;
     ip: string;
@@ -120,44 +158,4 @@ export class NodeStats {
     add_peer_stats(stats: PeerStats) {
         this.peer_stats.set(stats.pubkey, stats);
     }
-
-    static printDiff(prev: Map<string, NodeStats>, cur: Map<string, NodeStats>) {
-
-        const margin = "  ";
-        let header = '';
-        header += "PubKey".padStart(16) + margin;
-        header += "IP".padStart(16) + margin;
-        header += "Port".padStart(5) + margin;
-        header += "Uptime".padStart(12) + margin;
-        header += "Store".padStart(10) + margin;
-        header += "Retrieve".padStart(10) + margin;
-        console.log(header);
-        console.log("-".repeat(header.length))
-
-        prev.forEach(x => {
-            let line = '';
-            line += x.pubkey.substr(0, 16).padStart(16) + margin;
-            line += x.ip.padStart(16) + margin;
-            line += x.port.toString().padStart(5) + margin;
-
-            if (x.reset_time !== 0) {
-
-                const uptime = "";
-                const store_diff = cur.get(x.pubkey).client_store_requests - x.client_store_requests;
-                const store_diff_str = store_diff.toLocaleString();
-
-                const retrieve_diff = cur.get(x.pubkey).client_retrieve_requests - x.client_retrieve_requests;
-                const retrieve_diff_str = retrieve_diff.toLocaleString();
-
-                line += uptime.padStart(12) + margin;
-                line += store_diff_str.padStart(10) + margin;
-                line += retrieve_diff_str.padStart(10) + margin;
-
-            }
-
-            console.log(line);
-        });
-    }
-
-
 }
