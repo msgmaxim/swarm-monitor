@@ -1,7 +1,10 @@
 import { Account } from './account';
 import { Network } from './network';
-import { NodeStats } from './stats';
+import { NodeStats, PeerStats, NodePerformance, printLifetimeStats } from './stats'
 import { sleep } from './utils';
+import chalk from 'chalk'
+import { Snode } from 'snode';
+import { stringify } from 'querystring';
 
 const COMMANDS = {
   update: 'update_stats',
@@ -49,9 +52,7 @@ const getSnodeStats = async () => {
 
   console.log(`Nodes online: ${online_count}/${nodes.length}`);
 
-  NodeStats.printLifetimeStats(results);
-
-  await sleep(60000); // 1 min
+  printLifetimeStats(results);
 
   /// save to a map
   let prev_results = new Map<string, NodeStats>();
@@ -59,8 +60,65 @@ const getSnodeStats = async () => {
   results.forEach(x => {
     prev_results.set(x.pubkey, x);
   });
+  // Gather stats from other nodes
 
+  let own_perf: Map<string, NodePerformance> = new Map();
 
+  for (let pk in results) {
+    let res = results[pk];
+
+    for (let [key, value] of res.peer_stats) {
+
+      if (!own_perf.has(key)) {
+        own_perf.set(key, new NodePerformance(0));
+      }
+
+      let prev = own_perf.get(key);
+
+      prev.req_failed += value.requests_failed;
+
+      own_perf.set(key, prev);
+    }
+
+  }
+
+  console.log("Pubkey".padStart(16) + "  " + "Failed requests".padStart(15))
+
+  for (let [key, value] of own_perf) {
+
+    let line = key.substr(0, 16) + "  ";
+    line += value.req_failed.toLocaleString().padStart(15);
+
+    if (!prev_results.has(key)) {
+      continue;
+    }
+
+    if (value.req_failed !== 0) {
+      console.log(chalk.red(line));
+    } else {
+      console.log(chalk.white(line));
+    }
+  }
+
+  // all nodes
+
+  let swarm_ids2: Map<string, number> = new Map();
+  nodes.forEach(sn => {
+
+    if (!swarm_ids2.has(sn.swarm_id)) {
+      swarm_ids2.set(sn.swarm_id, 0);
+    }
+
+    let val = swarm_ids2.get(sn.swarm_id);
+    val += 1;
+    swarm_ids2.set(sn.swarm_id, val);
+  });
+
+  console.log(swarm_ids2);
+
+  return;
+
+  await sleep(10000);
   let results_2 = await Promise.all(nodes.map(async a => await network.getStats(a)));
 
   let cur_results = new Map<string, NodeStats>();
