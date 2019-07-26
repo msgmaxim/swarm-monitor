@@ -41,7 +41,7 @@ export class NodePerformance {
     }
 }
 
-export const printLifetimeStats = (results: NodeStats[]) => {
+export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:string}) => {
 
     const margin = "  ";
     let header = "";
@@ -49,8 +49,10 @@ export const printLifetimeStats = (results: NodeStats[]) => {
     header += "IP".padStart(16) + margin;
     header += "Port".padStart(5) + margin;
     header += "Uptime".padStart(12) + margin;
+    header += "UT Proof".padStart(12) + margin;
     header += "Store".padStart(10) + margin;
     header += "Retrieve".padStart(10) + margin;
+    header += "Status".padStart(10);
     console.log(header);
     console.log("-".repeat(header.length));
 
@@ -70,7 +72,8 @@ export const printLifetimeStats = (results: NodeStats[]) => {
 
         let swarm_id_str = ` SwarmID: ${swarm_id} `;
         let w = (header.length - swarm_id_str.length) / 2;
-        console.log("=".repeat(w) + swarm_id_str + "=".repeat(w));
+        let rem = (header.length - swarm_id_str.length) % 2;
+        console.log("=".repeat(w + rem) + swarm_id_str + "=".repeat(w));
 
         stats.forEach((res: NodeStats) => {
 
@@ -79,15 +82,17 @@ export const printLifetimeStats = (results: NodeStats[]) => {
             line += res.ip.padStart(16) + margin;
             line += res.port.toString().padStart(5) + margin;
 
-            if (res.reset_time !== 0) {
-                const uptime = toUptime(res.reset_time);
-                const store_req = res.client_store_requests.toLocaleString();
-                const retrieve_req = res.client_retrieve_requests.toLocaleString();
+            const valid = (res.reset_time !== 0);
+            const uptime = valid ? toUptime(res.reset_time) : "N/A";
+            const ut_proof = valid ? toUptime(res.last_uptime_proof) : "N/A";
+            const store_req = valid ? res.client_store_requests.toLocaleString() : "N/A";
+            const retrieve_req = valid ? res.client_retrieve_requests.toLocaleString() : "N/A";
 
-                line += uptime.padStart(12) + margin;
-                line += store_req.padStart(10) + margin;
-                line += retrieve_req.padStart(10) + margin;
-            }
+            line += uptime.padStart(12) + margin;
+            line += ut_proof.padStart(12) + margin;
+            line += store_req.padStart(10) + margin;
+            line += retrieve_req.padStart(10) + margin;
+            line += status[res.pubkey].padStart(10);
 
             console.log(line)
         })
@@ -103,16 +108,19 @@ export class NodeStats {
     client_store_requests: number;
     client_retrieve_requests: number;
     reset_time: number;
+    last_uptime_proof: number;
+    status: string; //todo
     swarm_id: string;
     peer_stats: Map<string, PeerStats>;
 
-    constructor(pubkey: string, ip: string, port: string, store: number, retrieve: number, reset_time: number, swarm_id: string) {
+    constructor(pubkey: string, ip: string, port: string, store: number, retrieve: number, reset_time: number, last_uptime_proof: number, swarm_id: string) {
         this.pubkey = pubkey;
         this.ip = ip;
         this.port = port;
         this.client_store_requests = store;
         this.client_retrieve_requests = retrieve;
         this.reset_time = reset_time;
+        this.last_uptime_proof = last_uptime_proof;
         this.swarm_id = swarm_id;
         this.peer_stats = new Map();
     }

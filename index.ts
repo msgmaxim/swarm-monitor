@@ -3,7 +3,7 @@ import { Network } from './network';
 import { NodeStats, PeerStats, NodePerformance, printLifetimeStats } from './stats'
 import { sleep } from './utils';
 import chalk from 'chalk'
-import { Snode } from 'snode';
+import { Snode } from './snode';
 import { stringify } from 'querystring';
 
 const COMMANDS = {
@@ -46,13 +46,36 @@ const getSnodeStats = async () => {
 
   const nodes = await network.getAllNodes();
 
+  // console.log(nodes);
+
+  const ip_count = nodes.filter((snode: { ip: string; }) => snode.ip !== '0.0.0.0');
+
   let results = await Promise.all(nodes.map(async a => await network.getStats(a)));
 
+  
   const online_count = results.reduce((acc, x) => acc += (x.reset_time !== 0 ? 1 : 0), 0);
+  
+  console.log(`Nodes with ip: ${ip_count.length}/${nodes.length}`);
+  console.log(`Storage server online: ${online_count}/${nodes.length}`);
+  
+  let res2 = await Promise.all(nodes.map(async a => {
+    const res = await network.tryPost(a);
+    return { status: res, pubkey : a.pubkey};
+  }));
 
-  console.log(`Nodes online: ${online_count}/${nodes.length}`);
+  const na_count = res2.reduce((acc, x) => acc += (x.status === "N/A" ? 1 : 0), 0);
+  const error_count = res2.reduce((acc, x) => acc += (x.status === "no post" ? 1 : 0), 0);
 
-  printLifetimeStats(results);
+  let status_map : {[key:string]:string} = {};
+  res2.forEach(x => {
+    status_map[x.pubkey] = x.status;
+  });
+
+
+  console.log(`Storage not reachable: ${na_count}`);
+  console.log(`Storage error on post: ${error_count}`);
+
+  printLifetimeStats(results, status_map);
 
   /// save to a map
   let prev_results = new Map<string, NodeStats>();
@@ -100,6 +123,7 @@ const getSnodeStats = async () => {
     }
   }
 
+  return;
   // all nodes
 
   let swarm_ids2: Map<string, number> = new Map();
@@ -116,7 +140,6 @@ const getSnodeStats = async () => {
 
   console.log(swarm_ids2);
 
-  return;
 
   await sleep(10000);
   let results_2 = await Promise.all(nodes.map(async a => await network.getStats(a)));

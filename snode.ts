@@ -18,8 +18,9 @@ export class Snode {
   port: string;
   messagesHolding: number;
   lastHash: string;
+  lastUptimeProof: number;
 
-  constructor(pubkey: string, ip: string, port: string, swarm_id: string) {
+  constructor(pubkey: string, ip: string, port: string, swarm_id: string, last_uptime: number) {
     this.pubkey = pubkey;
     this.network = new Network();
     this.ip = ip;
@@ -27,6 +28,7 @@ export class Snode {
     this.messagesHolding = 0;
     this.lastHash = '';
     this.swarm_id = swarm_id;
+    this.lastUptimeProof = last_uptime;
   }
 
   static hexToSnodeAddress(hexAddress: string) {
