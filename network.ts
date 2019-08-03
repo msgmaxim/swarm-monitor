@@ -93,7 +93,7 @@ export class Network {
 
       this.allNodes = result.result.service_node_states
         // .filter((snode: { public_ip: string; }) => snode.public_ip !== '0.0.0.0')
-        .map((snode: { public_ip: any; storage_port: any; service_node_pubkey: any; swarm_id: string; last_uptime_proof: number}) => new Snode(Snode.hexToSnodeAddress(snode.service_node_pubkey), snode.public_ip, snode.storage_port, snode.swarm_id, snode.last_uptime_proof));
+        .map((snode: { public_ip: any; storage_port: any; service_node_pubkey: any; swarm_id: string; last_uptime_proof: number}) => new Snode(snode.service_node_pubkey, snode.public_ip, snode.storage_port, snode.swarm_id, snode.last_uptime_proof));
       if (this.allNodes.length === 0) {
         throw new Error(`Error updating all nodes, couldn't get any valid ips`);
       }
@@ -113,7 +113,7 @@ export class Network {
 
     const url = `https://${sn.ip}:${sn.port}/get_stats/v1`
 
-    const default_val = new NodeStats(sn.pubkey, sn.ip, sn.port, 0, 0, 0, 0, sn.swarm_id);
+    const default_val = new NodeStats(sn.pubkey, sn.ip, sn.port, 0, 0, 0, 0, sn.swarm_id, "");
 
     try {
       const response = await fetch(url, { timeout: 5000 });
@@ -122,7 +122,7 @@ export class Network {
       }
       let res = await response.json();
 
-      let stats = new NodeStats(sn.pubkey, sn.ip, sn.port, res.client_store_requests, res.client_retrieve_requests, res.reset_time, sn.lastUptimeProof, sn.swarm_id);
+      let stats = new NodeStats(sn.pubkey, sn.ip, sn.port, res.client_store_requests, res.client_retrieve_requests, res.reset_time, sn.lastUptimeProof, sn.swarm_id, res.version);
       for (let peer in res.peers) {
         let val = res.peers[peer];
         let peer_stats = new PeerStats(peer, val.pushes_failed, val.requests_failed);

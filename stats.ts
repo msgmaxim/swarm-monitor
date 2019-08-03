@@ -52,7 +52,8 @@ export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:s
     header += "UT Proof".padStart(12) + margin;
     header += "Store".padStart(10) + margin;
     header += "Retrieve".padStart(10) + margin;
-    header += "Status".padStart(10);
+    header += "Status".padStart(10) + margin;
+    header += "Version".padStart(8);
     console.log(header);
     console.log("-".repeat(header.length));
 
@@ -92,7 +93,8 @@ export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:s
             line += ut_proof.padStart(12) + margin;
             line += store_req.padStart(10) + margin;
             line += retrieve_req.padStart(10) + margin;
-            line += status[res.pubkey].padStart(10);
+            line += status[res.pubkey].padStart(10) + margin;
+            line += res.version.padStart(8);
 
             console.log(line)
         })
@@ -112,8 +114,9 @@ export class NodeStats {
     status: string; //todo
     swarm_id: string;
     peer_stats: Map<string, PeerStats>;
+    version: string;
 
-    constructor(pubkey: string, ip: string, port: string, store: number, retrieve: number, reset_time: number, last_uptime_proof: number, swarm_id: string) {
+    constructor(pubkey: string, ip: string, port: string, store: number, retrieve: number, reset_time: number, last_uptime_proof: number, swarm_id: string, ver: string) {
         this.pubkey = pubkey;
         this.ip = ip;
         this.port = port;
@@ -123,6 +126,7 @@ export class NodeStats {
         this.last_uptime_proof = last_uptime_proof;
         this.swarm_id = swarm_id;
         this.peer_stats = new Map();
+        this.version = (ver) ? ver : "";
     }
 
     add_peer_stats(stats: PeerStats) {

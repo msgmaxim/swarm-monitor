@@ -46,17 +46,15 @@ const getSnodeStats = async () => {
 
   const nodes = await network.getAllNodes();
 
-  // console.log(nodes);
-
   const ip_count = nodes.filter((snode: { ip: string; }) => snode.ip !== '0.0.0.0');
 
   let results = await Promise.all(nodes.map(async a => await network.getStats(a)));
 
-  
   const online_count = results.reduce((acc, x) => acc += (x.reset_time !== 0 ? 1 : 0), 0);
   
   console.log(`Nodes with ip: ${ip_count.length}/${nodes.length}`);
-  console.log(`Storage server online: ${online_count}/${nodes.length}`);
+  const online_ratio = Math.round(100 * online_count / nodes.length);
+  console.log(`Storage server online: ${online_count}/${nodes.length} (${online_ratio}%)`);
   
   let res2 = await Promise.all(nodes.map(async a => {
     const res = await network.tryPost(a);
@@ -65,15 +63,20 @@ const getSnodeStats = async () => {
 
   const na_count = res2.reduce((acc, x) => acc += (x.status === "N/A" ? 1 : 0), 0);
   const error_count = res2.reduce((acc, x) => acc += (x.status === "no post" ? 1 : 0), 0);
+  const version_count = results.reduce((acc,x) => acc += (x.version === "1.0.4" ? 1 : 0), 0);
 
   let status_map : {[key:string]:string} = {};
   res2.forEach(x => {
     status_map[x.pubkey] = x.status;
   });
+  
+  const na104 = results.reduce((acc,x) => acc += ((x.version === "1.0.4" && status_map[x.pubkey] === "N/A") ? 1 : 0), 0);
+  const nopost104 = results.reduce((acc,x) => acc += ((x.version === "1.0.4" && status_map[x.pubkey] === "no post") ? 1 : 0), 0);
 
-
-  console.log(`Storage not reachable: ${na_count}`);
-  console.log(`Storage error on post: ${error_count}`);
+  const version_ratio = Math.round(100 * version_count / nodes.length);
+  console.log(`Version 1.0.4: ${version_count}/${results.length} (${version_ratio}%)`);
+  console.log(`Storage not reachable: ${na_count}/${res2.length} (${na104}/${version_count} for 1.0.4)`);
+  console.log(`Storage error on post: ${error_count}/${res2.length} (${nopost104}/${version_count} for 1.0.4)`);
 
   printLifetimeStats(results, status_map);
 
