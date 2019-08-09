@@ -43,6 +43,9 @@ export class NodePerformance {
 
 export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:string}) => {
 
+    /// TODO: print recent request count (and prev. period)
+    /// TODO: print target height (?)
+
     const margin = "  ";
     let header = "";
     header += "PubKey".padStart(16) + margin;
@@ -52,8 +55,10 @@ export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:s
     header += "UT Proof".padStart(12) + margin;
     header += "Store".padStart(10) + margin;
     header += "Retrieve".padStart(10) + margin;
+    header += "Height".padStart(8) + margin;
     header += "Status".padStart(10) + margin;
-    header += "Version".padStart(8);
+    header += "Version".padStart(8) + margin;
+    header += "Connections (in|out_http|out_https)".padStart(35);
     console.log(header);
     console.log("-".repeat(header.length));
 
@@ -88,13 +93,20 @@ export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:s
             const ut_proof = valid ? toUptime(res.last_uptime_proof) : "N/A";
             const store_req = valid ? res.client_store_requests.toLocaleString() : "N/A";
             const retrieve_req = valid ? res.client_retrieve_requests.toLocaleString() : "N/A";
+            const height = valid ? res.height.toLocaleString() : "N/A";
+
+            const https_in = valid ? res.https_in.toLocaleString() : "N/A";
+            const http_out = valid ? res.http_out.toLocaleString() : "N/A";
+            const https_out = valid ? res.https_out.toLocaleString() : "N/A";
 
             line += uptime.padStart(12) + margin;
             line += ut_proof.padStart(12) + margin;
             line += store_req.padStart(10) + margin;
             line += retrieve_req.padStart(10) + margin;
+            line += height.padStart(8) + margin;
             line += status[res.pubkey].padStart(10) + margin;
             line += res.version.padStart(8);
+            line += https_in.padStart(17) + http_out.padStart(9) + https_out.padStart(10);
 
             console.log(line)
         })
@@ -115,8 +127,14 @@ export class NodeStats {
     swarm_id: string;
     peer_stats: Map<string, PeerStats>;
     version: string;
+    height: number;
 
-    constructor(pubkey: string, ip: string, port: string, store: number, retrieve: number, reset_time: number, last_uptime_proof: number, swarm_id: string, ver: string) {
+    https_in: number;
+    https_out: number;
+    http_out: number;
+
+    constructor(pubkey: string, ip: string, port: string, store: number, retrieve: number, reset_time: number, last_uptime_proof: number, swarm_id: string, ver: string,
+                height: number, https_in: number, https_out: number, http_out: number) {
         this.pubkey = pubkey;
         this.ip = ip;
         this.port = port;
@@ -127,6 +145,10 @@ export class NodeStats {
         this.swarm_id = swarm_id;
         this.peer_stats = new Map();
         this.version = (ver) ? ver : "";
+        this.height = height;
+        this.https_in = https_in;
+        this.https_out = https_out;
+        this.http_out = http_out;
     }
 
     add_peer_stats(stats: PeerStats) {

@@ -63,20 +63,28 @@ const getSnodeStats = async () => {
 
   const na_count = res2.reduce((acc, x) => acc += (x.status === "N/A" ? 1 : 0), 0);
   const error_count = res2.reduce((acc, x) => acc += (x.status === "no post" ? 1 : 0), 0);
-  const version_count = results.reduce((acc,x) => acc += (x.version === "1.0.4" ? 1 : 0), 0);
 
   let status_map : {[key:string]:string} = {};
   res2.forEach(x => {
     status_map[x.pubkey] = x.status;
   });
-  
-  const na104 = results.reduce((acc,x) => acc += ((x.version === "1.0.4" && status_map[x.pubkey] === "N/A") ? 1 : 0), 0);
-  const nopost104 = results.reduce((acc,x) => acc += ((x.version === "1.0.4" && status_map[x.pubkey] === "no post") ? 1 : 0), 0);
 
-  const version_ratio = Math.round(100 * version_count / nodes.length);
-  console.log(`Version 1.0.4: ${version_count}/${results.length} (${version_ratio}%)`);
-  console.log(`Storage not reachable: ${na_count}/${res2.length} (${na104}/${version_count} for 1.0.4)`);
-  console.log(`Storage error on post: ${error_count}/${res2.length} (${nopost104}/${version_count} for 1.0.4)`);
+  console.log(`Storage not reachable: ${na_count}/${res2.length}`);
+  console.log(`Storage error on post: ${error_count}/${res2.length}`);
+
+  ["1.0.4", "1.0.5"].forEach(tag => {
+
+    const count = results.reduce((acc,x) => acc += (x.version === tag ? 1 : 0), 0);
+    const ratio = Math.round(100 * count / nodes.length);
+    console.log(`Version ${tag}: ${count}/${results.length} (${ratio}%)`);
+
+    const na = results.reduce((acc,x) => acc += ((x.version === tag && status_map[x.pubkey] === "N/A") ? 1 : 0), 0);
+    const nopost = results.reduce((acc,x) => acc += ((x.version === "1.0.4" && status_map[x.pubkey] === "no post") ? 1 : 0), 0);
+
+    console.log(`   N/A for ${tag}: ${na}/${count}`);
+    console.log(`   Error on post for ${tag}: ${nopost}/${count}`);
+
+  });
 
   printLifetimeStats(results, status_map);
 

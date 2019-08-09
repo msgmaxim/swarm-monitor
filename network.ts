@@ -10,6 +10,7 @@ import { stringify } from 'querystring';
 // const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
 // const SEED_NODE_URL = 'http://imaginary.stream:38157/json_rpc';
 const SEED_NODE_URL = 'http://lokiblocks.com:22023/json_rpc';
+// const SEED_NODE_URL = 'http://storage.testnetseed1.loki.network:38157/json_rpc';
 // const SEED_NODE_URL = 'http://doopool.xyz:22020/json_rpc';
 const CONCURRENT_REQUESTS = 1000;
 
@@ -113,7 +114,7 @@ export class Network {
 
     const url = `https://${sn.ip}:${sn.port}/get_stats/v1`
 
-    const default_val = new NodeStats(sn.pubkey, sn.ip, sn.port, 0, 0, 0, 0, sn.swarm_id, "");
+    const default_val = new NodeStats(sn.pubkey, sn.ip, sn.port, 0, 0, 0, 0, sn.swarm_id, "", 0, 0, 0, 0);
 
     try {
       const response = await fetch(url, { timeout: 5000 });
@@ -122,7 +123,13 @@ export class Network {
       }
       let res = await response.json();
 
-      let stats = new NodeStats(sn.pubkey, sn.ip, sn.port, res.client_store_requests, res.client_retrieve_requests, res.reset_time, sn.lastUptimeProof, sn.swarm_id, res.version);
+      // NOTE: client_store_requests will change to "total_store_requests starting with 1.0.5!"
+      // NOTE: client_retrieve_requests will change to "total_retrieve_requests starting with 1.0.5!"
+      const total_store_req = (res.total_store_requests !== undefined) ? res.total_store_requests : res.client_store_requests;
+      const total_retrieve_req = (res.total_retrieve_requests !== undefined) ? res.total_retrieve_requests : res.client_retrieve_requests;
+
+      let stats = new NodeStats(sn.pubkey, sn.ip, sn.port, total_store_req, total_retrieve_req, res.reset_time, sn.lastUptimeProof, sn.swarm_id, res.version, res.height,
+                                res.connections_in, res.https_connections_out, res.http_connections_out);
       for (let peer in res.peers) {
         let val = res.peers[peer];
         let peer_stats = new PeerStats(peer, val.pushes_failed, val.requests_failed);
@@ -144,7 +151,8 @@ export class Network {
     
     try {
       const response = await this._makeRequest(url, options);
-      if (!response.ok) {
+      /// 500 will be returned on incorrect pubkey (testnet)
+      if (!response.ok && response.status != 500) {
         return "no post";
       } else {
         return "OK";
