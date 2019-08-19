@@ -1,10 +1,8 @@
 import { Account } from './account';
 import { Network } from './network';
-import { NodeStats, PeerStats, NodePerformance, printLifetimeStats } from './stats'
+import { NodeStats, PeerStats, NodePerformance, printLifetimeStats, printDiff } from './stats'
 import { sleep } from './utils';
 import chalk from 'chalk'
-import { Snode } from './snode';
-import { stringify } from 'querystring';
 
 const COMMANDS = {
   update: 'update_stats',
@@ -29,7 +27,6 @@ const defaultMode = async () => {
       accounts.push(new Account());
     });
   await Promise.all(accounts.map(async a => {
-    const allNodes = await network.getAllNodes();
     const swarm = await a.getSwarm();
     await a.sendMessages(swarm)
     await sleep(5000);
@@ -163,7 +160,7 @@ const getSnodeStats = async () => {
 
   console.log("Difference:");
 
-  NodeStats.printDiff(prev_results, cur_results);
+  printDiff(prev_results, cur_results);
 }
 
 const commandMode = () => {
