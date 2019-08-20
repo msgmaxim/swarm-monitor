@@ -93,11 +93,11 @@ export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:s
             const ut_proof = valid ? toUptime(res.last_uptime_proof) : "N/A";
             const store_req = valid ? res.client_store_requests.toLocaleString() : "N/A";
             const retrieve_req = valid ? res.client_retrieve_requests.toLocaleString() : "N/A";
-            const height = valid ? res.height.toLocaleString() : "N/A";
 
-            const https_in = valid ? res.https_in.toLocaleString() : "N/A";
-            const http_out = valid ? res.http_out.toLocaleString() : "N/A";
-            const https_out = valid ? res.https_out.toLocaleString() : "N/A";
+            const height = (valid && res.version != "1.0.4" && res.version != "") ? res.height.toLocaleString() : "N/A";
+            const https_in = (valid && res.version != "1.0.4" && res.version != "") ? res.https_in.toLocaleString() : "N/A";
+            const http_out = (valid && res.version != "1.0.4" && res.version != "") ? res.http_out.toLocaleString() : "N/A";
+            const https_out = (valid && res.version != "1.0.4" && res.version != "") ? res.https_out.toLocaleString() : "N/A";
 
             line += uptime.padStart(12) + margin;
             line += ut_proof.padStart(12) + margin;
