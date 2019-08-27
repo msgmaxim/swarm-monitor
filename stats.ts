@@ -43,6 +43,11 @@ export class NodePerformance {
 
 export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:string}) => {
 
+
+    const show_ut_proof = false;
+    const show_connections = false;
+    const show_height = false;
+
     /// TODO: print recent request count (and prev. period)
     /// TODO: print target height (?)
 
@@ -52,13 +57,29 @@ export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:s
     header += "IP".padStart(16) + margin;
     header += "Port".padStart(5) + margin;
     header += "Uptime".padStart(12) + margin;
-    header += "UT Proof".padStart(12) + margin;
+
+    if (show_ut_proof) {
+        header += "UT Proof".padStart(12) + margin;
+    }
+
     header += "Store".padStart(10) + margin;
+    header += "Store recent".padStart(12) + margin;
+
+    header += "Total stored".padStart(12) + margin;
+
     header += "Retrieve".padStart(10) + margin;
-    header += "Height".padStart(8) + margin;
+
+    if (show_height) {
+        header += "Height".padStart(8) + margin;
+    }
+
     header += "Status".padStart(10) + margin;
     header += "Version".padStart(8) + margin;
-    header += "Connections (in|out_http|out_https)".padStart(35);
+
+    if (show_connections) {
+        header += "Connections (in|out_http|out_https)".padStart(35);
+    }
+
     console.log(header);
     console.log("-".repeat(header.length));
 
@@ -91,26 +112,66 @@ export const printLifetimeStats = (results: NodeStats[], status: {[key:string]:s
             const valid = (res.reset_time !== 0);
             const uptime = valid ? toUptime(res.reset_time) : "N/A";
             const ut_proof = valid ? toUptime(res.last_uptime_proof) : "N/A";
-            const store_req = valid ? res.client_store_requests.toLocaleString() : "N/A";
+            const store_req = valid ? res.total_store_requests.toLocaleString() : "N/A";
             const retrieve_req = valid ? res.client_retrieve_requests.toLocaleString() : "N/A";
 
-            const height = (valid && res.version != "1.0.4" && res.version != "") ? res.height.toLocaleString() : "N/A";
-            const https_in = (valid && res.version != "1.0.4" && res.version != "") ? res.https_in.toLocaleString() : "N/A";
-            const http_out = (valid && res.version != "1.0.4" && res.version != "") ? res.http_out.toLocaleString() : "N/A";
-            const https_out = (valid && res.version != "1.0.4" && res.version != "") ? res.https_out.toLocaleString() : "N/A";
+            const v105 = (valid && res.version != "1.0.4" && res.version != "1.0.3" && res.version != "");
+
+            const height = v105 ? res.height.toLocaleString() : "N/A";
+            const https_in = v105 ? res.https_in.toLocaleString() : "N/A";
+            const http_out = v105 ? res.http_out.toLocaleString() : "N/A";
+            const https_out = v105 ? res.https_out.toLocaleString() : "N/A";
+            const store_recent = v105 ? res.recent_store_requests.toLocaleString() : "N/A";
+
+            const total_stored = v105 ? res.total_stored.toLocaleString() : "N/A";
 
             line += uptime.padStart(12) + margin;
-            line += ut_proof.padStart(12) + margin;
+
+            if (show_ut_proof) {
+                line += ut_proof.padStart(12) + margin;
+            }
+
             line += store_req.padStart(10) + margin;
+
+            line += store_recent.padStart(12) + margin;
+
+            line += total_stored.padStart(12) + margin;
+
             line += retrieve_req.padStart(10) + margin;
-            line += height.padStart(8) + margin;
+
+            if (show_height) {
+                line += height.padStart(8) + margin;
+            }
+
             line += status[res.pubkey].padStart(10) + margin;
             line += res.version.padStart(8);
-            line += https_in.padStart(17) + http_out.padStart(9) + https_out.padStart(10);
+
+            if (show_connections) {
+                line += https_in.padStart(17) + http_out.padStart(9) + https_out.padStart(10);
+            }
 
             console.log(line)
         })
 
+    }
+
+    let size_distr: Map<number, number> = new Map();
+
+    for (let [swarm_id, stats] of swarm_ids) {
+
+        if (!size_distr.has(stats.length)) {
+            size_distr.set(stats.length, 0);
+        }
+
+        let val = size_distr.get(stats.length);
+        size_distr.set(stats.length, val + 1);
+
+    }
+
+    console.log("--- Swarm sizes ---");
+
+    for (let [size, count] of size_distr) {
+        console.log(`[${size}]: ${count}`);
     }
 
 }
@@ -137,7 +198,7 @@ export const printDiff = (prev: Map<string, NodeStats>, cur: Map<string, NodeSta
         if (x.reset_time !== 0) {
 
             const uptime = "";
-            const store_diff = cur.get(x.pubkey).client_store_requests - x.client_store_requests;
+            const store_diff = cur.get(x.pubkey).total_store_requests - x.total_store_requests;
             const store_diff_str = store_diff.toLocaleString();
 
             const retrieve_diff = cur.get(x.pubkey).client_retrieve_requests - x.client_retrieve_requests;
@@ -157,7 +218,9 @@ export class NodeStats {
     pubkey: string;
     ip: string;
     port: string;
-    client_store_requests: number;
+    total_store_requests: number;
+    recent_store_requests: number;
+    total_stored: number;
     client_retrieve_requests: number;
     reset_time: number;
     last_uptime_proof: number;
@@ -171,12 +234,15 @@ export class NodeStats {
     https_out: number;
     http_out: number;
 
-    constructor(pubkey: string, ip: string, port: string, store: number, retrieve: number, reset_time: number, last_uptime_proof: number, swarm_id: string, ver: string,
+    constructor(pubkey: string, ip: string, port: string, store: number, recent_store: number, total_stored: number,
+                retrieve: number, reset_time: number, last_uptime_proof: number, swarm_id: string, ver: string,
                 height: number, https_in: number, https_out: number, http_out: number) {
         this.pubkey = pubkey;
         this.ip = ip;
         this.port = port;
-        this.client_store_requests = store;
+        this.total_store_requests = store;
+        this.recent_store_requests = recent_store;
+        this.total_stored = total_stored;
         this.client_retrieve_requests = retrieve;
         this.reset_time = reset_time;
         this.last_uptime_proof = last_uptime_proof;

@@ -114,7 +114,7 @@ export class Network {
 
     const url = `https://${sn.ip}:${sn.port}/get_stats/v1`
 
-    const default_val = new NodeStats(sn.pubkey, sn.ip, sn.port, 0, 0, 0, 0, sn.swarm_id, "", 0, 0, 0, 0);
+    const default_val = new NodeStats(sn.pubkey, sn.ip, sn.port, 0, 0, 0, 0, 0, 0, sn.swarm_id, "", 0, 0, 0, 0);
 
     try {
       const response = await fetch(url, { timeout: 5000 });
@@ -128,7 +128,8 @@ export class Network {
       const total_store_req = (res.total_store_requests !== undefined) ? res.total_store_requests : res.client_store_requests;
       const total_retrieve_req = (res.total_retrieve_requests !== undefined) ? res.total_retrieve_requests : res.client_retrieve_requests;
 
-      let stats = new NodeStats(sn.pubkey, sn.ip, sn.port, total_store_req, total_retrieve_req, res.reset_time, sn.lastUptimeProof, sn.swarm_id, res.version, res.height,
+      let stats = new NodeStats(sn.pubkey, sn.ip, sn.port, total_store_req, res.recent_store_requests, res.total_stored, total_retrieve_req,
+                                res.reset_time, sn.lastUptimeProof, sn.swarm_id, res.version, res.height,
                                 res.connections_in, res.https_connections_out, res.http_connections_out);
       for (let peer in res.peers) {
         let val = res.peers[peer];
