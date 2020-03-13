@@ -69,7 +69,7 @@ const getSnodeStats = async () => {
   console.log(`Storage not reachable: ${na_count}/${res2.length}`);
   console.log(`Storage error on post: ${error_count}/${res2.length}`);
 
-  ["1.0.4", "1.0.5", "1.0.6"].forEach(tag => {
+  ["1.0.7"].forEach(tag => {
 
     const count = results.reduce((acc,x) => acc += (x.version === tag ? 1 : 0), 0);
     const ratio = Math.round(100 * count / nodes.length);

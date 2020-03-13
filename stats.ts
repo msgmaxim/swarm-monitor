@@ -60,6 +60,8 @@ export const printLifetimeStats = (results: NodeStats[],
     const show_connections = false;
     const show_height = false;
 
+    const show_failures = false;
+
     /// TODO: print recent request count (and prev. period)
     /// TODO: print target height (?)
 
@@ -85,13 +87,15 @@ export const printLifetimeStats = (results: NodeStats[],
         header += "Height".padStart(8) + margin;
     }
 
-    header += "Req failed".padStart(12) + margin;
-
-    header += "BC failed".padStart(10) + margin;
-    header += "Strg failed".padStart(12) + margin;
+    if (show_failures) {
+        header += "Req failed".padStart(12) + margin;
+        header += "BC failed".padStart(10) + margin;
+        header += "Strg failed".padStart(12) + margin;
+    }
 
     header += "Status".padStart(10) + margin;
     header += "Version".padStart(8) + margin;
+    header += "Connections".padStart(12) + margin;
 
     if (show_connections) {
         header += "Connections (in|out_http|out_https)".padStart(35);
@@ -163,7 +167,7 @@ export const printLifetimeStats = (results: NodeStats[],
             /// --- Test results ---
 
             const num_to_string = (a: number) => {
-                if (a === 0) return "";
+                if (!a || a === 0) return "";
                 return a.toLocaleString();
             };
 
@@ -171,14 +175,18 @@ export const printLifetimeStats = (results: NodeStats[],
             const bc_failed = test_reports.has(res.pubkey) ? num_to_string(test_reports.get(res.pubkey).bc_test_failed) : "N/A";
             const storage_failed = test_reports.has(res.pubkey) ? num_to_string(test_reports.get(res.pubkey).store_test_failed) : "N/A";
             
-            line += req_failed.padStart(12) + margin;
-            line += bc_failed.padStart(10) + margin;
-            line += storage_failed.padStart(12) + margin;
+            if (show_failures) {
+                line += req_failed.padStart(12) + margin;
+                line += bc_failed.padStart(10) + margin;
+                line += storage_failed.padStart(12) + margin;
+            }
 
             /// ---- end ----
 
             line += status[res.pubkey].padStart(10) + margin;
             line += res.version.padStart(8);
+
+            line += num_to_string(res.num_sockets).padStart(12);
 
             if (show_connections) {
                 line += https_in.padStart(17) + http_out.padStart(9) + https_out.padStart(10);
@@ -224,6 +232,7 @@ export class NodeStats {
     swarm_id: string;
     peer_stats: Map<string, PeerStats>;
     version: string;
+    num_sockets: number;
     height: number;
 
     https_in: number;
@@ -232,7 +241,7 @@ export class NodeStats {
 
     constructor(pubkey: string, ip: string, port: string, store: number, recent_store: number, total_stored: number,
                 retrieve: number, reset_time: number, last_uptime_proof: number, swarm_id: string, ver: string,
-                height: number, https_in: number, https_out: number, http_out: number) {
+                height: number, https_in: number, https_out: number, http_out: number, open_sockets: number) {
         this.pubkey = pubkey;
         this.ip = ip;
         this.port = port;
@@ -249,6 +258,7 @@ export class NodeStats {
         this.https_in = https_in;
         this.https_out = https_out;
         this.http_out = http_out;
+        this.num_sockets = open_sockets;
     }
 
     add_peer_stats(stats: PeerStats) {

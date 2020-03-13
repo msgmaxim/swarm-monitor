@@ -6,10 +6,14 @@ import { Message } from './message';
 import { NodeStats, PeerStats } from './stats'
 import { stringify } from 'querystring';
 
+const FOUNDATION_TESTNET = 'http://public.loki.foundation:38157/json_rpc';
+
 // Seed node endpoint
+// const SEED_NODE_URL = FOUNDATION_TESTNET;
 // const SEED_NODE_URL = 'http://13.238.53.205:38157/json_rpc';
-// const SEED_NODE_URL = 'http://imaginary.stream:38157/json_rpc';
-const SEED_NODE_URL = 'http://lokiblocks.com:22023/json_rpc';
+const SEED_NODE_URL = 'http://imaginary.stream:22023/json_rpc';
+// const SEED_NODE_URL = 'http://dev.imaginary.stream:38157/json_rpc';
+// const SEED_NODE_URL = 'http://lokiblocks.com:38157/json_rpc';
 // const SEED_NODE_URL = 'http://storage.testnetseed1.loki.network:38157/json_rpc';
 // const SEED_NODE_URL = 'http://doopool.xyz:22020/json_rpc';
 const CONCURRENT_REQUESTS = 1000;
@@ -62,7 +66,7 @@ export class Network {
       jsonrpc: '2.0',
       id: '0',
       method: 'POST',
-      timeout: 5000,
+      timeout: 15000,
       body: JSON.stringify(body),
       headers: {
         'Content-Type': 'application/json',
@@ -128,7 +132,7 @@ export class Network {
 
     const url = `https://${sn.ip}:${sn.port}/get_stats/v1`
 
-    const default_val = new NodeStats(sn.pubkey, sn.ip, sn.port, 0, 0, 0, 0, 0, 0, sn.swarm_id, "", 0, 0, 0, 0);
+    const default_val = new NodeStats(sn.pubkey, sn.ip, sn.port, 0, 0, 0, 0, 0, 0, sn.swarm_id, "", 0, 0, 0, 0, 0);
 
     try {
       const response = await fetch(url, { timeout: 5000 });
@@ -144,7 +148,7 @@ export class Network {
 
       let stats = new NodeStats(sn.pubkey, sn.ip, sn.port, total_store_req, res.recent_store_requests, res.total_stored, total_retrieve_req,
                                 res.reset_time, sn.lastUptimeProof, sn.swarm_id, res.version, res.height,
-                                res.connections_in, res.https_connections_out, res.http_connections_out);
+                                res.connections_in, res.https_connections_out, res.http_connections_out, res.open_socket_count);
       for (let peer in res.peers) {
         let val = res.peers[peer];
 
@@ -174,6 +178,7 @@ export class Network {
       const response = await this._makeRequest(url, options);
       /// 500 will be returned on incorrect pubkey (testnet)
       if (!response.ok && response.status != 500) {
+        // console.error(response)
         return "no post";
       } else {
         return "OK";
